@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36221.1 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idc.pefindo.pbk", "idc.pefindo.pbk.csproj", "{B574D34E-763D-3395-B042-3AD73DD7F6B5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B574D34E-763D-3395-B042-3AD73DD7F6B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B574D34E-763D-3395-B042-3AD73DD7F6B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B574D34E-763D-3395-B042-3AD73DD7F6B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B574D34E-763D-3395-B042-3AD73DD7F6B5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {34561E3B-C9A7-46EF-9BDE-A859FC66A0E4}
+	EndGlobalSection
+EndGlobal
