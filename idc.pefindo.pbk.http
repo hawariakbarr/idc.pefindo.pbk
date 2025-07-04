@@ -1,0 +1,6 @@
+@idc.pefindo.pbk_HostAddress = http://localhost:5189
+
+GET {{idc.pefindo.pbk_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
