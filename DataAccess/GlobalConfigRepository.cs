@@ -1,11 +1,10 @@
-using System.Data;
 using System.Data.Common;
 using idc.pefindo.pbk.DataAccess;
 
 namespace idc.pefindo.pbk.DataAccess;
 
 /// <summary>
-/// Implementation of global configuration repository
+/// Implementation of global configuration repository with proper async support
 /// </summary>
 public class GlobalConfigRepository : IGlobalConfigRepository
 {
@@ -24,18 +23,17 @@ public class GlobalConfigRepository : IGlobalConfigRepository
         {
             using var connection = await _connectionFactory.CreateConnectionAsync();
             using var command = connection.CreateCommand();
-
+            
             command.CommandText = "SELECT * FROM public.api_checkglobalconfig(@p_code)";
-            command.CommandType = CommandType.Text;
-
+            command.CommandType = System.Data.CommandType.Text;
+            
             var parameter = command.CreateParameter();
             parameter.ParameterName = "@p_code";
             parameter.Value = configCode;
             command.Parameters.Add(parameter);
 
-            // Cast to DbCommand to access ExecuteScalarAsync
-            var result = await ((DbCommand)command).ExecuteScalarAsync();
-
+            var result = await command.ExecuteScalarAsync();
+            
             _logger.LogDebug("Retrieved config value for {ConfigCode}: {Value}", configCode, result);
             return result?.ToString();
         }

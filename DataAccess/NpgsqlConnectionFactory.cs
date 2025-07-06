@@ -1,11 +1,11 @@
-using System.Data;
+using System.Data.Common;
 using Npgsql;
 using idc.pefindo.pbk.DataAccess;
 
 namespace idc.pefindo.pbk.DataAccess;
 
 /// <summary>
-/// PostgreSQL connection factory implementation with connection pooling
+/// PostgreSQL connection factory implementation with proper async support
 /// </summary>
 public class NpgsqlConnectionFactory : IDbConnectionFactory
 {
@@ -19,25 +19,24 @@ public class NpgsqlConnectionFactory : IDbConnectionFactory
         _logger = logger;
     }
 
-    public async Task<IDbConnection> CreateConnectionAsync()
+    public async Task<DbConnection> CreateConnectionAsync()
     {
         try
         {
+            _logger.LogDebug("Connection string: {ConnectionString}", _connectionString);
+
             var connection = new NpgsqlConnection(_connectionString);
+            _logger.LogDebug("NpgsqlConnection created, attempting to open...");
+
             await connection.OpenAsync();
-            
             _logger.LogDebug("Database connection opened successfully");
+
             return connection;
-        }
-        catch (NpgsqlException npgsqlEx)
-        {
-            _logger.LogError(npgsqlEx, "PostgreSQL error while creating database connection");
-            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create database connection");
-            throw new InvalidOperationException("Could not create database connection", ex);
+            _logger.LogError(ex, "Failed to create database connection. ConnectionString: {ConnectionString}", _connectionString);
+            throw;
         }
     }
 }

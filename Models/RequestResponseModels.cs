@@ -91,7 +91,31 @@ public class IndividualData
     
     [JsonPropertyName("total_facilities")]
     public string TotalFacilities { get; set; } = string.Empty;
+
+    [JsonPropertyName("kualitas_kredit_terburuk")]
+    public string KualitasKreditTerburuk { get; set; } = string.Empty;
+
+    [JsonPropertyName("bulan_kualitas_terburuk")]
+    public string BulanKualitasTerburuk { get; set; } = string.Empty;
+
+    [JsonPropertyName("kualitas_kredit_terakhir")]
+    public string KualitasKreditTerakhir { get; set; } = string.Empty;
+
+    [JsonPropertyName("bulan_kualitas_kredit_terakhir")]
+    public string BulanKualitasKreditTerakhir { get; set; } = string.Empty;
+
+    [JsonPropertyName("worst_ovd")]
+    public string WorstOvd { get; set; } = string.Empty;
     
+    [JsonPropertyName("tot_baki_debet_31_60_dpd")]
+    public string TotBakidebet3160dpd { get; set; } = string.Empty;
+    
+    [JsonPropertyName("no_kol1_active")]
+    public string NoKol1Active { get; set; } = string.Empty;
+    
+    [JsonPropertyName("nom_03_12_mth_all")]
+    public string Nom0312mthAll { get; set; } = string.Empty;
+
     [JsonPropertyName("created_date")]
     public string CreatedDate { get; set; } = string.Empty;
     

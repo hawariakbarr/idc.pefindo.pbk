@@ -1,9 +1,9 @@
-using System.Data;
+using System.Data.Common;
 
 namespace idc.pefindo.pbk.DataAccess;
 
 /// <summary>
-/// Factory for creating database connections with proper lifecycle management
+/// Factory for creating database connections with proper async support
 /// </summary>
 public interface IDbConnectionFactory
 {
@@ -11,5 +11,5 @@ public interface IDbConnectionFactory
     /// Creates and opens a new database connection
     /// </summary>
     /// <returns>Open database connection</returns>
-    Task<IDbConnection> CreateConnectionAsync();
+    Task<DbConnection> CreateConnectionAsync();
 }

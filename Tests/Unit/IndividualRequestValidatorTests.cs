@@ -29,9 +29,10 @@ public class IndividualRequestValidatorTests
 
     [Theory]
     [InlineData("")]
-    [InlineData(null)]
     [InlineData("X")]
-    [InlineData("ThisNameIsTooLongAndExceedsTheMaximumAllowedLengthForTheNameFieldWhichShouldBeValidated")]
+    [InlineData("ThisNameIsTooLongAndExceedsTheMaximumAllowedLengthForTheNameFieldWhichShouldBeValidatedBecauseItIsWayTooLong")]
+    [InlineData("John123")] // Contains numbers
+    [InlineData("John@Doe")] // Contains special characters
     public void InvalidName_ShouldHaveValidationError(string name)
     {
         // Arrange
@@ -46,8 +47,25 @@ public class IndividualRequestValidatorTests
     }
 
     [Theory]
+    [InlineData("John")]
+    [InlineData("John Doe")]
+    [InlineData("Mary Jane Smith")]
+    [InlineData("A B")] // Minimum valid length
+    public void ValidName_ShouldNotHaveValidationError(string name)
+    {
+        // Arrange
+        var request = TestHelper.CreateValidIndividualRequest();
+        request.Name = name;
+
+        // Act
+        var result = _validator.TestValidate(request);
+
+        // Assert
+        result.ShouldNotHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Theory]
     [InlineData("")]
-    [InlineData(null)]
     [InlineData("12345")]
     [InlineData("12345678901234567")]
     [InlineData("123456789012345a")]

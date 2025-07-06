@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using FluentValidation;
 using idc.pefindo.pbk.Models;
 using idc.pefindo.pbk.Services;
+using idc.pefindo.pbk.Services.Interfaces;
 
 namespace idc.pefindo.pbk.Controllers;
 

@@ -7,7 +7,6 @@ using idc.pefindo.pbk.Services.Interfaces;
 using idc.pefindo.pbk.DataAccess;
 using idc.pefindo.pbk.Utilities;
 using idc.pefindo.pbk.Models.Validators;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,9 +41,17 @@ builder.Services.AddScoped<IDbConnectionFactory, NpgsqlConnectionFactory>();
 
 // Register repositories
 builder.Services.AddScoped<IGlobalConfigRepository, GlobalConfigRepository>();
+builder.Services.AddScoped<IPbkDataRepository, PbkDataRepository>();
 
-// Register services
+// Register HttpClient for Pefindo API
+builder.Services.AddHttpClient<IPefindoApiService, PefindoApiService>();
+
+// Register core services
 builder.Services.AddScoped<ICycleDayValidationService, CycleDayValidationService>();
+builder.Services.AddScoped<IPefindoApiService, PefindoApiService>();
+builder.Services.AddScoped<ITokenManagerService, TokenManagerService>();
+builder.Services.AddScoped<ISimilarityValidationService, SimilarityValidationService>();
+builder.Services.AddScoped<IDataAggregationService, DataAggregationService>();
 builder.Services.AddScoped<IIndividualProcessingService, IndividualProcessingService>();
 
 // Add FluentValidation
@@ -65,7 +72,7 @@ builder.Services.AddSwaggerGen(c =>
             Email = "dev@idc.com"
         }
     });
-    
+
     // Include XML comments
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -87,7 +94,6 @@ builder.Services.AddCors(options =>
 });
 
 // Add health checks
-// Ensure the connection string is not null or empty before passing it to AddNpgSql
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrEmpty(connectionString))
 {
@@ -95,13 +101,7 @@ if (string.IsNullOrEmpty(connectionString))
 }
 
 builder.Services.AddHealthChecks()
-    .AddNpgSql(connectionString)
-    .AddCheck("CustomHealthCheck", () => 
-        HealthCheckResult.Healthy("The health check passed."))
-    .AddCheck("AnotherHealthCheck", () =>
-        HealthCheckResult.Degraded("Another health check is degraded."))
-    .AddCheck("ThirdHealthCheck", () =>
-        HealthCheckResult.Unhealthy("The third health check is unhealthy."));
+    .AddNpgSql(connectionString);
 
 var app = builder.Build();
 
@@ -112,7 +112,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "IDC Pefindo PBK API v1");
-        c.RoutePrefix = string.Empty; // Serve Swagger UI at app's root
+        c.RoutePrefix = string.Empty; // Available at root
+    });
+
+    // Also serve at /swagger for convenience
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "IDC Pefindo PBK API v1");
+        c.RoutePrefix = "swagger";
     });
 }
 
