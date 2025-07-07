@@ -1,10 +1,9 @@
 using System.Data.Common;
-using idc.pefindo.pbk.DataAccess;
 
 namespace idc.pefindo.pbk.DataAccess;
 
 /// <summary>
-/// Implementation of global configuration repository with proper async support
+/// Updated GlobalConfigRepository using configuration-based database access
 /// </summary>
 public class GlobalConfigRepository : IGlobalConfigRepository
 {
@@ -21,25 +20,28 @@ public class GlobalConfigRepository : IGlobalConfigRepository
     {
         try
         {
-            using var connection = await _connectionFactory.CreateConnectionAsync();
+            // Use DatabaseKeys.Bk for global config
+            using var connection = await _connectionFactory.CreateConnectionAsync(DatabaseKeys.Core);
             using var command = connection.CreateCommand();
-            
+
             command.CommandText = "SELECT * FROM public.api_checkglobalconfig(@p_code)";
             command.CommandType = System.Data.CommandType.Text;
-            
+
             var parameter = command.CreateParameter();
             parameter.ParameterName = "@p_code";
             parameter.Value = configCode;
             command.Parameters.Add(parameter);
 
             var result = await command.ExecuteScalarAsync();
-            
-            _logger.LogDebug("Retrieved config value for {ConfigCode}: {Value}", configCode, result);
+
+            _logger.LogDebug("Retrieved config value for {ConfigCode} from {DatabaseKey}: {Value}",
+                configCode, DatabaseKeys.Bk, result);
             return result?.ToString();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving config value for code {ConfigCode}", configCode);
+            _logger.LogError(ex, "Error retrieving config value for code {ConfigCode} from {DatabaseKey}",
+                configCode, DatabaseKeys.Bk);
             throw;
         }
     }
@@ -47,7 +49,7 @@ public class GlobalConfigRepository : IGlobalConfigRepository
     public async Task<Dictionary<string, string>> GetMultipleConfigsAsync(params string[] configCodes)
     {
         var result = new Dictionary<string, string>();
-        
+
         foreach (var code in configCodes)
         {
             var value = await GetConfigValueAsync(code);
@@ -56,8 +58,8 @@ public class GlobalConfigRepository : IGlobalConfigRepository
                 result[code] = value;
             }
         }
-        
-        _logger.LogDebug("Retrieved {Count} config values", result.Count);
+
+        _logger.LogDebug("Retrieved {Count} config values from {DatabaseKey}", result.Count, DatabaseKeys.Bk);
         return result;
     }
 }

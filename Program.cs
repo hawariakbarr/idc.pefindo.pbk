@@ -1,21 +1,30 @@
-using Serilog;
+using EncryptionApi.Services;
 using FluentValidation;
-using Microsoft.OpenApi.Models;
 using idc.pefindo.pbk.Configuration;
+using idc.pefindo.pbk.DataAccess;
+using idc.pefindo.pbk.Handlers;
+using idc.pefindo.pbk.Middleware;
+using idc.pefindo.pbk.Models.Validators;
 using idc.pefindo.pbk.Services;
 using idc.pefindo.pbk.Services.Interfaces;
-using idc.pefindo.pbk.DataAccess;
-using idc.pefindo.pbk.Utilities;
-using idc.pefindo.pbk.Models.Validators;
+using idc.pefindo.pbk.Services.Interfaces.Logging;
+using idc.pefindo.pbk.Services.Logging;
+using Microsoft.OpenApi.Models;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
+// Configure Serilog with structured logging
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("logs/app-.txt", rollingInterval: RollingInterval.Day)
+    .Enrich.WithProperty("Application", "IDC-Pefindo-PBK")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] [{CorrelationId}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+    .WriteTo.File("logs/app-.txt",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] [{CorrelationId}] {Message:lj} {Properties:j}{NewLine}{Exception}")
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -28,6 +37,13 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.WriteIndented = true;
     });
 
+// Add HttpContextAccessor for correlation service
+builder.Services.AddHttpContextAccessor();
+
+// Register database configuration
+builder.Services.Configure<DatabaseConfiguration>(
+    builder.Configuration.GetSection("DatabaseConfiguration"));
+
 // Register configuration
 builder.Services.Configure<PefindoConfig>(
     builder.Configuration.GetSection("PefindoConfig"));
@@ -37,7 +53,7 @@ builder.Services.Configure<SimilarityConfig>(
     builder.Configuration.GetSection("SimilarityConfig"));
 
 // Register database connection
-builder.Services.AddScoped<IDbConnectionFactory, NpgsqlConnectionFactory>();
+builder.Services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
 
 // Register repositories
 builder.Services.AddScoped<IGlobalConfigRepository, GlobalConfigRepository>();
@@ -45,6 +61,31 @@ builder.Services.AddScoped<IPbkDataRepository, PbkDataRepository>();
 
 // Register HttpClient for Pefindo API
 builder.Services.AddHttpClient<IPefindoApiService, PefindoApiService>();
+
+// Register logging services
+builder.Services.AddScoped<ICorrelationService, CorrelationService>();
+builder.Services.AddScoped<IHttpRequestLogger, HttpRequestLogger>();
+builder.Services.AddScoped<IProcessStepLogger, ProcessStepLogger>();
+builder.Services.AddScoped<IErrorLogger, ErrorLogger>();
+builder.Services.AddScoped<IAuditLogger, AuditLogger>();
+
+// Register HTTP client with logging handler
+builder.Services.AddTransient<HttpLoggingHandler>();
+builder.Services.AddHttpClient<IPefindoApiService, PefindoApiService>()
+    .AddHttpMessageHandler<HttpLoggingHandler>()
+    .ConfigureHttpClient((serviceProvider, client) =>
+    {
+        var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<PefindoConfig>>().Value;
+        client.BaseAddress = new Uri(config.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds);
+    });
+
+// Add Memory Cache
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 500; // Limit cache size
+});
+
 
 // Register core services
 builder.Services.AddScoped<ICycleDayValidationService, CycleDayValidationService>();
@@ -56,6 +97,9 @@ builder.Services.AddScoped<IIndividualProcessingService, IndividualProcessingSer
 
 // Add FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<IndividualRequestValidator>();
+
+// Add custom middleware
+builder.Services.AddScoped<IEncryptionService, EncryptionService>();
 
 // Add Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
@@ -73,6 +117,13 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
+    // Add correlation ID to Swagger
+    c.AddServer(new OpenApiServer
+    {
+        Url = "/",
+        Description = "Current server"
+    });
+
     // Include XML comments
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -80,6 +131,15 @@ builder.Services.AddSwaggerGen(c =>
     {
         c.IncludeXmlComments(xmlPath);
     }
+
+    // Add global headers for correlation tracking
+    c.AddSecurityDefinition("CorrelationId", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Name = "X-Correlation-ID",
+        Type = SecuritySchemeType.ApiKey,
+        Description = "Correlation ID for request tracking"
+    });
 });
 
 // Add CORS
@@ -113,6 +173,8 @@ if (app.Environment.IsDevelopment())
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "IDC Pefindo PBK API v1");
         c.RoutePrefix = string.Empty; // Available at root
+        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
+        c.DisplayRequestDuration();
     });
 
     // Also serve at /swagger for convenience
@@ -120,20 +182,70 @@ if (app.Environment.IsDevelopment())
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "IDC Pefindo PBK API v1");
         c.RoutePrefix = "swagger";
+        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
+        c.DisplayRequestDuration();
     });
 }
 
-app.UseMiddleware<GlobalExceptionMiddleware>();
-app.UseSerilogRequestLogging();
+
+// Add custom middleware in correct order
+app.UseMiddleware<GlobalExceptionMiddleware>(); // Global exception handling
+app.UseMiddleware<CorrelationMiddleware>(); // Correlation ID tracking
+
+
+// Standard middleware
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+        diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+        diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].FirstOrDefault());
+        diagnosticContext.Set("ClientIP", httpContext.Connection.RemoteIpAddress?.ToString());
+
+        // Add correlation ID if available
+        if (httpContext.Items.TryGetValue("CorrelationId", out var correlationId))
+        {
+            diagnosticContext.Set("CorrelationId", correlationId);
+        }
+    };
+});
+
+
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseAuthorization();
+
 app.MapControllers();
-app.MapHealthChecks("/health");
+
+// Additional health check endpoints
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false  
+});
+
+// Add a simple info endpoint
+app.MapGet("/info", () => new
+{
+    Application = "IDC Pefindo PBK API",
+    Version = "1.0.0",
+    Environment = app.Environment.EnvironmentName,
+    Timestamp = DateTime.UtcNow,
+    MachineName = Environment.MachineName
+});
 
 try
 {
-    Log.Information("Starting IDC Pefindo PBK API");
+    Log.Information("Starting IDC Pefindo PBK API with comprehensive logging");
+    Log.Information("Environment: {Environment}", app.Environment.EnvironmentName);
+    Log.Information("Application started at: {StartTime}", DateTime.UtcNow);
+
     app.Run();
 }
 catch (Exception ex)
@@ -142,6 +254,7 @@ catch (Exception ex)
 }
 finally
 {
+    Log.Information("Application shutdown completed");
     Log.CloseAndFlush();
 }
 

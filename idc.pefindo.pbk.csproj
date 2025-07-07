@@ -11,6 +11,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Tests\**" />
+    <Content Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Core ASP.NET Core packages -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
@@ -58,17 +65,18 @@
 
   <ItemGroup>
     <Folder Include="Controllers\" />
-    <Folder Include="DataAccess\" />
-    <Folder Include="database\" />
     <Folder Include="Files\" />
     <Folder Include="logs\" />
-    <Folder Include="Models\DTOs\" />
     <Folder Include="Models\Validators\" />
-    <Folder Include="Services\Implementations\" />
-    <Folder Include="Services\Interfaces\" />
-    <Folder Include="Tests\Integration\" />
-    <Folder Include="Tests\Unit\" />
-    <Folder Include="Utilities\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="EncryptionApi">
+      <HintPath>E:\A Temp Working Space\Repository\EncryptionApi\bin\Debug\net8.0\EncryptionApi.dll</HintPath>
+    </Reference>
+    <Reference Include="Helper">
+      <HintPath>..\Helper\bin\Debug\net8.0\Helper.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

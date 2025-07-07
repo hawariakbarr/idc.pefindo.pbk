@@ -116,6 +116,8 @@ public class IndividualData
     [JsonPropertyName("nom_03_12_mth_all")]
     public string Nom0312mthAll { get; set; } = string.Empty;
 
+
+
     [JsonPropertyName("created_date")]
     public string CreatedDate { get; set; } = string.Empty;
     

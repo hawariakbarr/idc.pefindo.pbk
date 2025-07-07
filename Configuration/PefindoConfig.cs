@@ -45,13 +45,25 @@ public class CycleDayConfig
 /// </summary>
 public static class GlobalConfigKeys
 {
+    // Cycle day configuration
     public const string CycleDay = "GC31";
+
+    // Similarity check configuration
     public const string SimilarityCheckVersion = "GC33";
     public const string TableVersion = "GC34";
     public const string NameThreshold = "GC35";
     public const string MotherNameThreshold = "GC36";
-    public const string ApiTimeoutSeconds = "GC37";
-    public const string RetryAttempts = "GC38";
+
+    // Token management
     public const string TokenCacheMinutes = "GC39";
-    public const string MaxReportSizeMb = "GC40";
+
+    // Logging configuration
+    public const string LogRetentionDays = "GC40";
+    public const string LogLevel = "GC41";
+    public const string EnableAuditLogging = "GC42";
+
+    // Performance configuration
+    public const string MaxConcurrentRequests = "GC50";
+    public const string RequestTimeoutSeconds = "GC51";
+    public const string ApiRetryAttempts = "GC52";
 }

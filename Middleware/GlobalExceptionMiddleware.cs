@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Json;
 using FluentValidation;
 
-namespace idc.pefindo.pbk.Utilities;
+namespace idc.pefindo.pbk.Middleware;
 
 /// <summary>
 /// Global exception handling middleware for consistent error responses

@@ -1,8 +1,8 @@
-using System.Data;
-using System.Data.Common;
 using idc.pefindo.pbk.DataAccess;
 using idc.pefindo.pbk.Models;
 using idc.pefindo.pbk.Services.Interfaces;
+using System.Data;
+using System.Data.Common;
 
 namespace idc.pefindo.pbk.Services;
 
@@ -23,25 +23,27 @@ public class SimilarityValidationService : ISimilarityValidationService
     }
 
     public async Task<SimilarityValidationResult> ValidateSearchSimilarityAsync(
-        IndividualRequest inputData, 
-        PefindoSearchData searchData, 
-        string appNo, 
+        IndividualRequest inputData,
+        PefindoSearchData searchData,
+        string appNo,
         double nameThreshold)
     {
         try
         {
-            _logger.LogDebug("Validating search similarity for app_no: {AppNo}", appNo);
-            
-            using var connection = await _connectionFactory.CreateConnectionAsync();
+            _logger.LogDebug("Validating search similarity for app_no: {AppNo} using database: {Database}",
+                appNo, DatabaseKeys.En);
+
+            // Use idc.en database for similarity validation
+            using var connection = await _connectionFactory.CreateConnectionAsync(DatabaseKeys.En);
             using var command = connection.CreateCommand();
-            
+
             command.CommandText = @"
                 SELECT is_match, name_similarity, status, message 
                 FROM public.chksimilarity_v4_param(
                     @p_ktp, @p_fullname, @p_dateofbirth, @p_app_no,
                     @p_ktp_source, @p_fullname_source, @p_dateofbirth_source, @p_name_threshold
                 )";
-            
+
             AddParameter(command, "@p_ktp", inputData.IdNumber);
             AddParameter(command, "@p_fullname", inputData.Name);
             AddParameter(command, "@p_dateofbirth", inputData.DateOfBirth);
@@ -50,9 +52,9 @@ public class SimilarityValidationService : ISimilarityValidationService
             AddParameter(command, "@p_fullname_source", searchData.NamaDebitur);
             AddParameter(command, "@p_dateofbirth_source", searchData.TanggalLahir);
             AddParameter(command, "@p_name_threshold", nameThreshold);
-            
+
             using var reader = await command.ExecuteReaderAsync();
-            
+
             if (await reader.ReadAsync())
             {
                 var result = new SimilarityValidationResult
@@ -62,18 +64,19 @@ public class SimilarityValidationService : ISimilarityValidationService
                     Status = reader.GetString("status"),
                     Message = reader.GetString("message")
                 };
-                
-                _logger.LogInformation("Search similarity validation completed for {AppNo}. Match: {IsMatch}, Similarity: {Similarity}",
-                    appNo, result.IsMatch, result.NameSimilarity);
-                
+
+                _logger.LogInformation("Search similarity validation completed for {AppNo} using {Database}. Match: {IsMatch}, Similarity: {Similarity}",
+                    appNo, DatabaseKeys.En, result.IsMatch, result.NameSimilarity);
+
                 return result;
             }
-            
+
             throw new InvalidOperationException("No result returned from similarity validation function");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating search similarity for app_no: {AppNo}", appNo);
+            _logger.LogError(ex, "Error validating search similarity for app_no: {AppNo} using database: {Database}",
+                appNo, DatabaseKeys.En);
             throw;
         }
     }
@@ -87,9 +90,11 @@ public class SimilarityValidationService : ISimilarityValidationService
     {
         try
         {
-            _logger.LogDebug("Validating report similarity for app_no: {AppNo}", appNo);
-            
-            using var connection = await _connectionFactory.CreateConnectionAsync();
+            _logger.LogDebug("Validating report similarity for app_no: {AppNo} using database: {Database}",
+                appNo, DatabaseKeys.En);
+
+            // Use idc.en database for similarity validation
+            using var connection = await _connectionFactory.CreateConnectionAsync(DatabaseKeys.En);
             using var command = connection.CreateCommand();
             
             command.CommandText = @"
@@ -139,7 +144,6 @@ public class SimilarityValidationService : ISimilarityValidationService
             throw;
         }
     }
-
     private static void AddParameter(DbCommand command, string name, object value)
     {
         var parameter = command.CreateParameter();

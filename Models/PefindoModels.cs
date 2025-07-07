@@ -5,21 +5,49 @@ namespace idc.pefindo.pbk.Models;
 #region Authentication Models
 
 /// <summary>
-/// Pefindo token response model
+/// Updated Pefindo token response model with data object
 /// </summary>
 public class PefindoTokenResponse
 {
     [JsonPropertyName("code")]
     public string Code { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("message")]
     public string Message { get; set; } = string.Empty;
-    
+
+    [JsonPropertyName("data")]
+    public PefindoTokenData? Data { get; set; }
+}
+
+/// <summary>
+/// Token data object from new API response format
+/// </summary>
+public class PefindoTokenData
+{
+    [JsonPropertyName("valid_date")]
+    public string ValidDate { get; set; } = string.Empty;
+
     [JsonPropertyName("token")]
     public string Token { get; set; } = string.Empty;
+
+}
+
+/// <summary>
+/// In-memory token cache entry
+/// </summary>
+public class TokenCacheEntry
+{
+    public string Token { get; set; } = string.Empty;
+    public DateTime ExpiryDate { get; set; }
+    public DateTime CachedAt { get; set; }
+    public string ValidDateOriginal { get; set; } = string.Empty;
+
+    public bool IsExpired => DateTime.UtcNow >= ExpiryDate;
+
+    public TimeSpan TimeUntilExpiry => ExpiryDate - DateTime.UtcNow;
 }
 
 #endregion
@@ -283,6 +311,28 @@ public class PefindoDebiturInfo
     
     [JsonPropertyName("max_overdue_last12months")]
     public int MaxOverdueLast12Months { get; set; }
+
+    [JsonPropertyName("wo_contract")]
+    public int WoContract { get; set; } 
+
+    [JsonPropertyName("wo_agunan")]
+    public int WoAgunan { get; set; }
+
+    [JsonPropertyName("kualitas_kredit_terburuk")]
+    public string KualitasKreditTerburuk { get; set; } = string.Empty;
+
+    [JsonPropertyName("bulan_kualitas_terburuk")]
+    public string BulanKualitasTerburuk { get; set; } = string.Empty;
+
+    [JsonPropertyName("baki_debet_kualitas_terburuk")]
+    public decimal BakiDebetKualitasTerburuk { get; set; }
+
+    [JsonPropertyName("kualitas_kredit_terakhir")]
+    public string KualitasKreditTerakhir { get; set; } = string.Empty;
+
+    [JsonPropertyName("bulan_kualitas_kredit_terakhir")]
+    public string BulanKualitasKreditTerakhir { get; set; } = string.Empty;
+
 }
 
 /// <summary>

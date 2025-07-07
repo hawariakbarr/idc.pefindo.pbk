@@ -206,11 +206,11 @@ public class PbkDataRepository : IPbkDataRepository
     {
         try
         {
-            using var connection = await _connectionFactory.CreateConnectionAsync();
+            using var connection = await _connectionFactory.CreateConnectionAsync(DatabaseKeys.Bk);
             using var command = connection.CreateCommand();
             
             command.CommandText = @"
-                SELECT public.log_processing_step(
+                SELECT pefindo.log_processing_step(
                     @p_app_no, @p_step_name, @p_step_status, @p_step_data, @p_error_message, @p_processing_time_ms
                 )";
             
@@ -237,7 +237,7 @@ public class PbkDataRepository : IPbkDataRepository
         {
             var logEntries = new List<ProcessingLogEntry>();
             
-            using var connection = await _connectionFactory.CreateConnectionAsync();
+            using var connection = await _connectionFactory.CreateConnectionAsync(DatabaseKeys.Bk);
             using var command = connection.CreateCommand();
             
             command.CommandText = @"

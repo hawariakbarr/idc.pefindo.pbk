@@ -38,4 +38,23 @@ public static class TestHelper
             FacilityLimit = -1000 // Invalid: negative
         };
     }
+
+    /// <summary>
+    /// Creates test database configuration
+    /// </summary>
+    public static Dictionary<string, string?> CreateTestDatabaseConfiguration()
+    {
+        return new Dictionary<string, string?>
+        {
+            ["DBEncryptedPassword"] = "chp6Ov+o88fjesa58tlMCXYPm6QZYpmWJVRgWfLfhlo=",
+            ["DatabaseConfiguration:Names:idccore"] = "idc.core",
+            ["DatabaseConfiguration:Names:idcen"] = "idc.en",
+            ["DatabaseConfiguration:Names:idcbk"] = "idc.bk",
+            ["DatabaseConfiguration:Names:idccust"] = "idc.cust",
+            ["DatabaseConfiguration:ConnectionStrings:idccore"] = "Host=localhost;Database=idc.core_test;Username=test_user;Password={DBEncryptedPassword};",
+            ["DatabaseConfiguration:ConnectionStrings:idcen"] = "Host=localhost;Database=idc.en_test;Username=test_user;Password={DBEncryptedPassword};",
+            ["DatabaseConfiguration:ConnectionStrings:idcbk"] = "Host=localhost;Database=idc.bk_test;Username=test_user;Password={DBEncryptedPassword};",
+            ["DatabaseConfiguration:ConnectionStrings:idccust"] = "Host=localhost;Database=idc.cust_test;Username=test_user;Password={DBEncryptedPassword};",
+        };
+    }
 }

@@ -3,7 +3,6 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using idc.pefindo.pbk.DataAccess;
 using idc.pefindo.pbk.Services;
-using idc.pefindo.pbk.Configuration;
 
 namespace idc.pefindo.pbk.Tests.Unit;
 
@@ -46,21 +45,26 @@ public class CycleDayValidationServiceTests
         var result = await _service.GetCurrentCycleDayConfigAsync();
 
         // Assert
-        Assert.Equal("7", result);
+        Assert.Equal("7", result); // Default value
     }
 
-    [Fact]
-    public async Task ValidateCycleDayAsync_InvalidConfig_ReturnsFalse()
+    [Theory]
+    [InlineData("7", 0, true)]   // Within tolerance
+    [InlineData("7", 7, true)]   // Exact match
+    [InlineData("7", 14, false)] // Outside tolerance
+    [InlineData("invalid", 0, false)] // Invalid config
+    public async Task ValidateCycleDayAsync_VariousScenarios_ReturnsExpectedResult(
+        string configValue, int tolerance, bool expectedResult)
     {
         // Arrange
         _mockGlobalConfigRepository.Setup(x => x.GetConfigValueAsync("GC31"))
-            .ReturnsAsync("invalid");
+            .ReturnsAsync(configValue);
 
         // Act
-        var result = await _service.ValidateCycleDayAsync(0);
+        var result = await _service.ValidateCycleDayAsync(tolerance);
 
         // Assert
-        Assert.False(result);
+        Assert.Equal(expectedResult, result);
     }
 
     [Fact]
