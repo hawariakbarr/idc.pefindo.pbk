@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using idc.pefindo.pbk.Configuration;
-using Helper;
 using EncryptionApi.Services;
 
 namespace idc.pefindo.pbk.DataAccess;

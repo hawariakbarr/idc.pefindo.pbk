@@ -201,13 +201,13 @@ app.UseSerilogRequestLogging(options =>
     {
         diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
         diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
-        diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].FirstOrDefault());
-        diagnosticContext.Set("ClientIP", httpContext.Connection.RemoteIpAddress?.ToString());
+        diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].FirstOrDefault() ?? "Unknown");
+        diagnosticContext.Set("ClientIP", httpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown");
 
         // Add correlation ID if available
         if (httpContext.Items.TryGetValue("CorrelationId", out var correlationId))
         {
-            diagnosticContext.Set("CorrelationId", correlationId);
+            diagnosticContext.Set("CorrelationId", correlationId ?? "Unknown");
         }
     };
 });

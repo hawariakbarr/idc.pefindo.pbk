@@ -1,6 +1,6 @@
 ﻿namespace idc.pefindo.pbk.Configuration
 {
-    // <summary>
+    /// <summary>
     /// Database configuration model for multi-database support
     /// </summary>
     public class DatabaseConfiguration

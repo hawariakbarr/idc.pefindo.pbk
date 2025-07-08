@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
-    <NoWarn>$(NoWarn);1591</NoWarn>
+    <NoWarn>$(NoWarn);1591;CS7022</NoWarn>
     <UserSecretsId>aspnet-idc.pefindo.pbk-20241203</UserSecretsId>
   </PropertyGroup>
 
@@ -72,10 +72,7 @@
 
   <ItemGroup>
     <Reference Include="EncryptionApi">
-      <HintPath>E:\A Temp Working Space\Repository\EncryptionApi\bin\Debug\net8.0\EncryptionApi.dll</HintPath>
-    </Reference>
-    <Reference Include="Helper">
-      <HintPath>..\Helper\bin\Debug\net8.0\Helper.dll</HintPath>
+      <HintPath>EncryptionApi.dll</HintPath>
     </Reference>
   </ItemGroup>
 
