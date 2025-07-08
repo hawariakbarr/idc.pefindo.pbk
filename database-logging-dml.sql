@@ -16,6 +16,7 @@ CREATE TABLE pefindo.bk_log_entries (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
     status VARCHAR(20), -- Success, Failed, InProgress
+    error_message TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

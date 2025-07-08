@@ -1,6 +1,7 @@
 using idc.pefindo.pbk.Configuration;
 using idc.pefindo.pbk.DataAccess;
 using idc.pefindo.pbk.Services.Interfaces;
+using idc.pefindo.pbk.Services.Interfaces.Logging;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text;
@@ -45,12 +46,18 @@ public class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>
 
             builder.ConfigureServices(services =>
             {
-                // Remove real database services
+                // Remove real database services and logging services
                 var descriptorsToRemove = services.Where(d =>
                     d.ServiceType == typeof(IDbConnectionFactory) ||
                     d.ServiceType == typeof(IGlobalConfigRepository) ||
                     d.ServiceType == typeof(IPbkDataRepository) ||
-                    d.ServiceType == typeof(IPefindoApiService)).ToList();
+                    d.ServiceType == typeof(IPefindoApiService) ||
+                    d.ServiceType == typeof(ICorrelationLogger) ||
+                    d.ServiceType == typeof(IProcessStepLogger) ||
+                    d.ServiceType == typeof(IHttpRequestLogger) ||
+                    d.ServiceType == typeof(IErrorLogger) ||
+                    d.ServiceType == typeof(IAuditLogger) ||
+                    d.ServiceType == typeof(ICorrelationService)).ToList();
 
                 foreach (var descriptor in descriptorsToRemove)
                 {
@@ -62,6 +69,14 @@ public class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>
                 services.AddScoped<IGlobalConfigRepository, MockGlobalConfigRepository>();
                 services.AddScoped<IPbkDataRepository, MockPbkDataRepository>();
                 services.AddScoped<IPefindoApiService, MockPefindoApiService>();
+                
+                // Register mock logging services
+                services.AddScoped<ICorrelationService, MockCorrelationService>();
+                services.AddScoped<ICorrelationLogger, MockCorrelationLogger>();
+                services.AddScoped<IProcessStepLogger, MockProcessStepLogger>();
+                services.AddScoped<IHttpRequestLogger, MockHttpRequestLogger>();
+                services.AddScoped<IErrorLogger, MockErrorLogger>();
+                services.AddScoped<IAuditLogger, MockAuditLogger>();
 
                 // Remove health check that might fail in test environment
                 var healthCheckDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(DatabaseHealthCheck));

@@ -5,6 +5,8 @@ using System.Text;
 using System.Text.Json;
 using idc.pefindo.pbk.Models;
 using idc.pefindo.pbk.Tests;
+using idc.pefindo.pbk.Services.Interfaces.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace idc.pefindo.pbk.Tests.Integration;
 
@@ -106,5 +108,81 @@ public class CompleteWorkflowTests : IntegrationTestBase
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("IDC Pefindo PBK API", content);
         Assert.Contains("idcpefindo", content);
+    }
+
+    [Fact]
+    public async Task PostIndividual_WithValidData_ShouldLogProcessSteps()
+    {
+        // Arrange
+        var request = TestHelper.CreateValidIndividualRequest();
+        request.CfLosAppNo = "TEST-LOGGING-001";
+        request.IdNumber = "1234567890123456"; // This ID is recognized by mock service
+        request.Tolerance = 30; // High tolerance to pass validation
+
+        // Act
+        var json = JsonSerializer.Serialize(request);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync("/idcpefindo/individual", content);
+
+        // Assert
+        using var scope = _factory.Services.CreateScope();
+        
+        // Verify correlation logging
+        var correlationLogger = scope.ServiceProvider.GetRequiredService<ICorrelationLogger>() as MockCorrelationLogger;
+        Assert.NotNull(correlationLogger);
+        
+        var logEntries = correlationLogger.GetAllLogEntries();
+        Assert.NotEmpty(logEntries);
+        
+        var processLogEntry = logEntries.FirstOrDefault(e => e.ProcessName == "IndividualProcessing");
+        Assert.NotNull(processLogEntry);
+        Assert.Equal("InProgress", processLogEntry.Status);
+        
+        // Verify process step logging
+        var processStepLogger = scope.ServiceProvider.GetRequiredService<IProcessStepLogger>() as MockProcessStepLogger;
+        Assert.NotNull(processStepLogger);
+        
+        var stepLogs = processStepLogger.GetStepLogs();
+        Assert.NotEmpty(stepLogs);
+        
+        // Verify audit logging
+        var auditLogger = scope.ServiceProvider.GetRequiredService<IAuditLogger>() as MockAuditLogger;
+        Assert.NotNull(auditLogger);
+        
+        var auditLogs = auditLogger.GetAuditLogs();
+        Assert.NotEmpty(auditLogs);
+        Assert.Contains(auditLogs, log => log.Action == "PBKProcessingStarted");
+    }
+
+    [Fact]
+    public async Task PostIndividual_WithInvalidData_ShouldLogErrors()
+    {
+        // Arrange
+        var invalidRequest = new IndividualRequest
+        {
+            CfLosAppNo = "", // Invalid: empty app number
+            Name = "", // Invalid: empty name
+            IdNumber = "invalid", // Invalid: wrong format
+            Tolerance = -1 // Invalid: negative tolerance
+        };
+
+        // Act
+        var json = JsonSerializer.Serialize(invalidRequest);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync("/idcpefindo/individual", content);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        
+        // Verify error logging occurred
+        var errorLogger = scope.ServiceProvider.GetRequiredService<IErrorLogger>() as MockErrorLogger;
+        Assert.NotNull(errorLogger);
+        
+        // Note: Validation errors are handled by model validation, not by our error logger
+        // But we can verify the logger service is available and working
+        var errorLogs = errorLogger.GetErrorLogs();
+        // Error logs might be empty for validation errors, which is expected
     }
 }

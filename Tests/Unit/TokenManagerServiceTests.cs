@@ -2,6 +2,7 @@ using Xunit;
 using Moq;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using idc.pefindo.pbk.Services;
 using idc.pefindo.pbk.Services.Interfaces;
 using idc.pefindo.pbk.Services.Interfaces.Logging;

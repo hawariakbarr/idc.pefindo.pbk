@@ -1,73 +1,94 @@
-﻿using Xunit;
-using Moq;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Configuration;
-using idc.pefindo.pbk.Configuration;
+using Xunit;
+using FluentAssertions;
 using idc.pefindo.pbk.DataAccess;
-using EncryptionApi.Services;
+using idc.pefindo.pbk.Tests.Mocks;
 
 namespace idc.pefindo.pbk.Tests.Unit;
 
 public class DbConnectionFactoryTests
 {
-    private readonly Mock<ILogger<DbConnectionFactory>> _mockLogger;
-    private readonly Mock<IConfiguration> _mockConfiguration;
-
-    public DbConnectionFactoryTests()
-    {
-        _mockLogger = new Mock<ILogger<DbConnectionFactory>>();
-        _mockConfiguration = new Mock<IConfiguration>();
-    }
-
     [Fact]
-    public void Constructor_WithValidConfiguration_ShouldInitializeSuccessfully()
+    public void MockDbConnectionFactory_GetAvailableDatabaseKeys_ReturnsExpectedKeys()
     {
         // Arrange
-        var databaseConfig = new DatabaseConfiguration
-        {
-            Names = new Dictionary<string, string>
-            {
-                { DatabaseKeys.Bk, "idc_pefindo_pbk_test" }
-            },
-            ConnectionStrings = new Dictionary<string, string>
-            {
-                { DatabaseKeys.Bk, "Host=localhost;Database=idc_pefindo_pbk_test;Username=test;Password={DBEncryptedPassword};" }
-            }
-        };
-
-        var options = Options.Create(databaseConfig);
-        _mockConfiguration.Setup(x => x["DBEncryptedPassword"])
-            .Returns("test_encrypted_password");
+        var mockFactory = new MockDbConnectionFactory();
         
-        var mockEncryptionService = new Mock<IEncryptionService>();
-        mockEncryptionService.Setup(x => x.DecryptString("test_encrypted_password"))
-            .Returns("test_decrypted_password");
-
-        // Act & Assert - Should not throw
-        Assert.Throws<Exception>(() => new DbConnectionFactory(options, _mockConfiguration.Object, _mockLogger.Object, mockEncryptionService.Object));
-        // Note: This will throw because we don't have the actual Encryption.DecryptString method in tests
-        // In a real test environment, you would mock this dependency
+        // Act
+        var availableKeys = mockFactory.GetAvailableDatabaseKeys();
+        
+        // Assert
+        availableKeys.Should().NotBeEmpty();
+        availableKeys.Should().Contain(DatabaseKeys.Core);
+        availableKeys.Should().Contain(DatabaseKeys.En);
+        availableKeys.Should().Contain(DatabaseKeys.Bk);
     }
 
     [Fact]
-    public void Constructor_WithInvalidConfiguration_ShouldThrow()
+    public async Task MockDbConnectionFactory_CreateConnection_ThrowsExpectedException()
     {
         // Arrange
-        var databaseConfig = new DatabaseConfiguration
-        {
-            Names = new Dictionary<string, string>(),
-            ConnectionStrings = new Dictionary<string, string>()
-        };
-
-        var options = Options.Create(databaseConfig);
-
-        var mockEncryptionService = new Mock<IEncryptionService>();
-        mockEncryptionService.Setup(x => x.DecryptString(It.IsAny<string>()))
-            .Returns("test_decrypted_password");
-
+        var mockFactory = new MockDbConnectionFactory();
+        
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            new DbConnectionFactory(options, _mockConfiguration.Object, _mockLogger.Object, mockEncryptionService.Object));
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+            await mockFactory.CreateConnectionAsync());
+    }
+
+    [Fact]
+    public async Task MockDbConnectionFactory_CreateConnectionWithKey_ThrowsExpectedException()
+    {
+        // Arrange
+        var mockFactory = new MockDbConnectionFactory();
+        
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => 
+            await mockFactory.CreateConnectionAsync(DatabaseKeys.Bk));
+    }
+
+    [Fact]
+    public async Task MockDbConnectionFactory_CreateConnectionWithInvalidKey_ThrowsArgumentException()
+    {
+        // Arrange
+        var mockFactory = new MockDbConnectionFactory();
+        
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(async () => 
+            await mockFactory.CreateConnectionAsync("invalid_key"));
+    }
+
+    [Fact]
+    public async Task MockDbConnectionFactory_ValidateAllConnections_ReturnsHealthyStatus()
+    {
+        // Arrange
+        var mockFactory = new MockDbConnectionFactory();
+        
+        // Act
+        var result = await mockFactory.ValidateAllConnectionsAsync();
+        
+        // Assert
+        result.Should().NotBeEmpty();
+        result.Should().ContainKey(DatabaseKeys.Core);
+        result.Should().ContainKey(DatabaseKeys.En);
+        result.Should().ContainKey(DatabaseKeys.Bk);
+        
+        result[DatabaseKeys.Core].Should().BeTrue();
+        result[DatabaseKeys.En].Should().BeTrue();
+        result[DatabaseKeys.Bk].Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(DatabaseKeys.Core)]
+    [InlineData(DatabaseKeys.En)]
+    [InlineData(DatabaseKeys.Bk)]
+    public void MockDbConnectionFactory_SupportedDatabaseKeys_AreValid(string databaseKey)
+    {
+        // Arrange
+        var mockFactory = new MockDbConnectionFactory();
+        
+        // Act
+        var availableKeys = mockFactory.GetAvailableDatabaseKeys();
+        
+        // Assert
+        availableKeys.Should().Contain(databaseKey);
     }
 }

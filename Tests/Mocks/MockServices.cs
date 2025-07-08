@@ -1,6 +1,8 @@
 using idc.pefindo.pbk.DataAccess;
 using idc.pefindo.pbk.Models;
+using idc.pefindo.pbk.Models.Logging;
 using idc.pefindo.pbk.Services.Interfaces;
+using idc.pefindo.pbk.Services.Interfaces.Logging;
 using System.Data.Common;
 using System.Text;
 using System.Text.Json;
@@ -201,4 +203,256 @@ public class MockPefindoApiService : IPefindoApiService
 
     public Task<byte[]> DownloadPdfReportAsync(string eventId, string token)
         => Task.FromResult(Encoding.UTF8.GetBytes($"Mock PDF Report for event {eventId}"));
+}
+
+// Mock logging services
+public class MockCorrelationService : ICorrelationService
+{
+    private string _correlationId;
+    private string _requestId;
+    private string? _userId;
+
+    public MockCorrelationService(string? correlationId = null, string? requestId = null)
+    {
+        _correlationId = correlationId ?? $"mock-corr-{Guid.NewGuid():N}";
+        _requestId = requestId ?? $"mock-req-{Guid.NewGuid():N}";
+    }
+
+    public string GetCorrelationId() => _correlationId;
+    public string GetRequestId() => _requestId;
+    public void SetCorrelationContext(string correlationId, string requestId, string? userId = null)
+    {
+        _correlationId = correlationId;
+        _requestId = requestId;
+        _userId = userId;
+    }
+}
+
+public class MockCorrelationLogger : ICorrelationLogger
+{
+    private readonly List<LogEntry> _logEntries = new();
+
+    public Task LogProcessStartAsync(string correlationId, string requestId, string processName, string? userId = null, string? sessionId = null)
+    {
+        var entry = new LogEntry
+        {
+            Id = _logEntries.Count + 1,
+            CorrelationId = correlationId,
+            RequestId = requestId,
+            ProcessName = processName,
+            UserId = userId,
+            SessionId = sessionId,
+            StartTime = DateTime.UtcNow,
+            Status = "InProgress",
+            CreatedAt = DateTime.UtcNow
+        };
+        _logEntries.Add(entry);
+        return Task.CompletedTask;
+    }
+
+    public Task LogProcessCompleteAsync(string correlationId, string status = "Success")
+    {
+        var entry = _logEntries.FirstOrDefault(e => e.CorrelationId == correlationId);
+        if (entry != null)
+        {
+            entry.Status = status;
+            entry.EndTime = DateTime.UtcNow;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task LogProcessFailAsync(string correlationId, string status = "Failed", string? errorMessage = null)
+    {
+        var entry = _logEntries.FirstOrDefault(e => e.CorrelationId == correlationId);
+        if (entry != null)
+        {
+            entry.Status = status;
+            entry.EndTime = DateTime.UtcNow;
+            entry.ErrorMessage = errorMessage;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateProcessStatusAsync(string correlationId, string status)
+    {
+        var entry = _logEntries.FirstOrDefault(e => e.CorrelationId == correlationId);
+        if (entry != null)
+        {
+            entry.Status = status;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<LogEntry?> GetLogEntryAsync(string correlationId)
+    {
+        var entry = _logEntries.FirstOrDefault(e => e.CorrelationId == correlationId);
+        return Task.FromResult(entry);
+    }
+
+    public List<LogEntry> GetAllLogEntries() => _logEntries;
+}
+
+public class MockProcessStepLogger : IProcessStepLogger
+{
+    private readonly List<ProcessStepLogEntry> _stepLogs = new();
+
+    public Task LogStepStartAsync(string correlationId, string requestId, string stepName, int stepOrder, object? inputData = null)
+    {
+        var entry = new ProcessStepLogEntry
+        {
+            Id = _stepLogs.Count + 1,
+            CorrelationId = correlationId,
+            RequestId = requestId,
+            StepName = stepName,
+            StepOrder = stepOrder,
+            Status = "Started",
+            InputData = inputData != null ? JsonSerializer.Serialize(inputData) : null,
+            StartTime = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        };
+        _stepLogs.Add(entry);
+        return Task.CompletedTask;
+    }
+
+    public Task LogStepCompleteAsync(string correlationId, string requestId, string stepName, object? outputData = null, int? durationMs = null)
+    {
+        var entry = _stepLogs.LastOrDefault(e => e.CorrelationId == correlationId && e.StepName == stepName);
+        if (entry != null)
+        {
+            entry.Status = "Completed";
+            entry.OutputData = outputData != null ? JsonSerializer.Serialize(outputData) : null;
+            entry.DurationMs = durationMs;
+            entry.EndTime = DateTime.UtcNow;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task LogStepFailAsync(string correlationId, string requestId, string stepName, Exception ex, object? inputData = null, int? durationMs = null)
+    {
+        var entry = _stepLogs.LastOrDefault(e => e.CorrelationId == correlationId && e.StepName == stepName);
+        if (entry != null)
+        {
+            entry.Status = "Failed";
+            entry.ErrorDetails = ex.Message;
+            entry.DurationMs = durationMs;
+            entry.EndTime = DateTime.UtcNow;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<List<ProcessStepLogEntry>> GetProcessLogsByCorrelationIdAsync(string correlationId)
+    {
+        var logs = _stepLogs.Where(e => e.CorrelationId == correlationId).ToList();
+        return Task.FromResult(logs);
+    }
+
+    public List<ProcessStepLogEntry> GetStepLogs() => _stepLogs;
+}
+
+public class MockHttpRequestLogger : IHttpRequestLogger
+{
+    private readonly List<HttpRequestLogEntry> _httpLogs = new();
+
+    public Task LogRequestAsync(HttpRequestLogEntry entry)
+    {
+        entry.Id = _httpLogs.Count + 1;
+        entry.CreatedAt = DateTime.UtcNow;
+        _httpLogs.Add(entry);
+        return Task.CompletedTask;
+    }
+
+    public Task<List<HttpRequestLogEntry>> GetRequestLogsByCorrelationIdAsync(string correlationId)
+    {
+        var logs = _httpLogs.Where(e => e.CorrelationId == correlationId).ToList();
+        return Task.FromResult(logs);
+    }
+
+    public List<HttpRequestLogEntry> GetHttpLogs() => _httpLogs;
+}
+
+public class MockErrorLogger : IErrorLogger
+{
+    private readonly List<ErrorLogEntry> _errorLogs = new();
+
+    public Task LogErrorAsync(string source, string message, Exception? exception = null, string? correlationId = null, object? additionalData = null)
+    {
+        var entry = new ErrorLogEntry
+        {
+            Id = _errorLogs.Count + 1,
+            CorrelationId = correlationId,
+            LogLevel = "Error",
+            Source = source,
+            Message = message,
+            Exception = exception?.ToString(),
+            StackTrace = exception?.StackTrace,
+            AdditionalData = additionalData != null ? JsonSerializer.Serialize(additionalData) : null,
+            CreatedAt = DateTime.UtcNow
+        };
+        _errorLogs.Add(entry);
+        return Task.CompletedTask;
+    }
+
+    public Task LogWarningAsync(string source, string message, string? correlationId = null, object? additionalData = null)
+    {
+        var entry = new ErrorLogEntry
+        {
+            Id = _errorLogs.Count + 1,
+            CorrelationId = correlationId,
+            LogLevel = "Warning",
+            Source = source,
+            Message = message,
+            AdditionalData = additionalData != null ? JsonSerializer.Serialize(additionalData) : null,
+            CreatedAt = DateTime.UtcNow
+        };
+        _errorLogs.Add(entry);
+        return Task.CompletedTask;
+    }
+
+    public Task LogCriticalAsync(string source, string message, Exception? exception = null, string? correlationId = null, object? additionalData = null)
+    {
+        var entry = new ErrorLogEntry
+        {
+            Id = _errorLogs.Count + 1,
+            CorrelationId = correlationId,
+            LogLevel = "Critical",
+            Source = source,
+            Message = message,
+            Exception = exception?.ToString(),
+            StackTrace = exception?.StackTrace,
+            AdditionalData = additionalData != null ? JsonSerializer.Serialize(additionalData) : null,
+            CreatedAt = DateTime.UtcNow
+        };
+        _errorLogs.Add(entry);
+        return Task.CompletedTask;
+    }
+
+    public List<ErrorLogEntry> GetErrorLogs() => _errorLogs;
+}
+
+public class MockAuditLogger : IAuditLogger
+{
+    private readonly List<AuditLogEntry> _auditLogs = new();
+
+    public Task LogActionAsync(string correlationId, string userId, string action, string? entityType = null, string? entityId = null, object? oldValue = null, object? newValue = null, string? ipAddress = null, string? userAgent = null)
+    {
+        var entry = new AuditLogEntry
+        {
+            Id = _auditLogs.Count + 1,
+            CorrelationId = correlationId,
+            UserId = userId,
+            Action = action,
+            EntityType = entityType,
+            EntityId = entityId,
+            OldValue = oldValue != null ? JsonSerializer.Serialize(oldValue) : null,
+            NewValue = newValue != null ? JsonSerializer.Serialize(newValue) : null,
+            Timestamp = DateTime.UtcNow,
+            IpAddress = ipAddress,
+            UserAgent = userAgent,
+            CreatedAt = DateTime.UtcNow
+        };
+        _auditLogs.Add(entry);
+        return Task.CompletedTask;
+    }
+
+    public List<AuditLogEntry> GetAuditLogs() => _auditLogs;
 }
