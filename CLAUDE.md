@@ -78,11 +78,11 @@ IndividualController → IndividualProcessingService → [9 Sequential Steps] �
 ```
 
 Each processing step includes:
-- Correlation ID tracking
+- Request tracking using a unique **Transaction ID**
 - Comprehensive logging (start, success, failure)
 - Error handling with rollback capability
-- Performance monitoring
-- Audit trail logging
+- Audit trail logging 
+
 
 ### Configuration Management
 
@@ -109,7 +109,7 @@ Each processing step includes:
 ### Key Design Patterns
 
 1. **Service-Oriented Architecture**: Clear separation between controllers, services, and data access
-2. **Comprehensive Logging**: Structured logging with Serilog, correlation IDs, and audit trails
+2. **Comprehensive Logging**: Structured logging with Serilog, transaction IDs, and audit trails
 3. **Configuration-Driven**: Runtime behavior controlled through database configuration
 4. **Error Handling**: Graceful error handling with detailed error logging and user-friendly responses
 5. **Asynchronous Processing**: Full async/await pattern throughout the pipeline
@@ -128,7 +128,7 @@ The project uses **xUnit** with **FluentAssertions** and **Moq** for testing:
 - **Encrypted Passwords**: Database passwords are encrypted using `EncryptionApi`
 - **Token Management**: JWT tokens are securely cached with automatic refresh
 - **Sensitive Data Sanitization**: `SensitiveDataSanitizer` utility for logging
-- **Correlation Tracking**: Request correlation IDs for audit and troubleshooting
+- **Transaction Tracking**: Request transaction IDs for audit and troubleshooting
 
 ## Development Notes
 

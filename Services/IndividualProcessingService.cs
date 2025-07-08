@@ -22,6 +22,7 @@ public class IndividualProcessingService : IIndividualProcessingService
 
     // New logging services
     private readonly ICorrelationService _correlationService;
+    private readonly ICorrelationLogger _correlationLogger;
     private readonly IProcessStepLogger _processStepLogger;
     private readonly IErrorLogger _errorLogger;
     private readonly IAuditLogger _auditLogger;
@@ -36,6 +37,7 @@ public class IndividualProcessingService : IIndividualProcessingService
         IGlobalConfigRepository globalConfigRepository,
         ILogger<IndividualProcessingService> logger,
         ICorrelationService correlationService,
+        ICorrelationLogger correlationLogger,
         IProcessStepLogger processStepLogger,
         IErrorLogger errorLogger,
         IAuditLogger auditLogger)
@@ -49,6 +51,7 @@ public class IndividualProcessingService : IIndividualProcessingService
         _globalConfigRepository = globalConfigRepository;
         _logger = logger;
         _correlationService = correlationService;
+        _correlationLogger = correlationLogger;
         _processStepLogger = processStepLogger;
         _errorLogger = errorLogger;
         _auditLogger = auditLogger;
@@ -67,6 +70,9 @@ public class IndividualProcessingService : IIndividualProcessingService
         {
             _logger.LogInformation("Starting complete individual processing for app_no: {AppNo}, correlation: {CorrelationId}",
                 appNo, correlationId);
+
+            // Log process start to master correlation log
+            await _correlationLogger.LogProcessStartAsync(correlationId, requestId, "IndividualProcessing", "system", null);
 
             //// Audit log the start of processing
             await _auditLogger.LogActionAsync(correlationId, "system", "PBKProcessingStarted",
@@ -339,6 +345,9 @@ public class IndividualProcessingService : IIndividualProcessingService
 
             var response = new IndividualResponse { Data = individualData };
 
+            // Log process completion to master correlation log
+            await _correlationLogger.LogProcessCompleteAsync(correlationId, "Success");
+
             // Audit log successful completion
             await _auditLogger.LogActionAsync(correlationId, "system", "PBKProcessingCompleted",
                 "IndividualResponse", appNo, null, new { status = "success", processing_time_ms = globalStopwatch.ElapsedMilliseconds });
@@ -351,6 +360,9 @@ public class IndividualProcessingService : IIndividualProcessingService
         catch (Exception ex)
         {
             globalStopwatch.Stop();
+
+            // Log process failure to master correlation log
+            await _correlationLogger.LogProcessFailAsync(correlationId, "Failed", ex.Message);
 
             // Log comprehensive error information
             await _errorLogger.LogErrorAsync("IndividualProcessingService.ProcessRequest",

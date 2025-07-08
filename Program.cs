@@ -64,6 +64,7 @@ builder.Services.AddHttpClient<IPefindoApiService, PefindoApiService>();
 
 // Register logging services
 builder.Services.AddScoped<ICorrelationService, CorrelationService>();
+builder.Services.AddScoped<ICorrelationLogger, CorrelationLogger>();
 builder.Services.AddScoped<IHttpRequestLogger, HttpRequestLogger>();
 builder.Services.AddScoped<IProcessStepLogger, ProcessStepLogger>();
 builder.Services.AddScoped<IErrorLogger, ErrorLogger>();
