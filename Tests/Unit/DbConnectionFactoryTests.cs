@@ -1,7 +1,7 @@
 using Xunit;
 using FluentAssertions;
 using idc.pefindo.pbk.DataAccess;
-using idc.pefindo.pbk.Tests.Mocks;
+using idc.pefindo.pbk.Tests.Integration;
 
 namespace idc.pefindo.pbk.Tests.Unit;
 

@@ -1,6 +1,6 @@
 using FluentAssertions;
 using idc.pefindo.pbk.Services.Logging;
-using idc.pefindo.pbk.Tests.Mocks;
+using idc.pefindo.pbk.Tests.Integration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;

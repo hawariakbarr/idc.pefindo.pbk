@@ -3,8 +3,8 @@ using idc.pefindo.pbk.DataAccess;
 using idc.pefindo.pbk.Services.Interfaces;
 using idc.pefindo.pbk.Services.Interfaces.Logging;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text;
 using System.Text.Json;
 using Xunit;
@@ -73,14 +73,15 @@ public class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>
                 services.AddScoped<IGlobalConfigRepository, MockGlobalConfigRepository>();
                 services.AddScoped<IPbkDataRepository, MockPbkDataRepository>();
                 services.AddScoped<IPefindoApiService, MockPefindoApiService>();
-                
-                // Register mock logging services
-                services.AddScoped<ICorrelationService, MockCorrelationService>();
-                services.AddScoped<ICorrelationLogger, MockCorrelationLogger>();
-                services.AddScoped<IProcessStepLogger, MockProcessStepLogger>();
-                services.AddScoped<IHttpRequestLogger, MockHttpRequestLogger>();
-                services.AddScoped<IErrorLogger, MockErrorLogger>();
-                services.AddScoped<IAuditLogger, MockAuditLogger>();
+
+                // Register mock logging services as SINGLETON to maintain state across scopes
+                // This is critical for integration tests to capture log entries
+                services.AddScoped<ICorrelationService, MockCorrelationService>(); // Keep scoped for per-request context
+                services.AddSingleton<ICorrelationLogger, MockCorrelationLogger>(); // Changed to Singleton
+                services.AddSingleton<IProcessStepLogger, MockProcessStepLogger>(); // Already singleton
+                services.AddSingleton<IHttpRequestLogger, MockHttpRequestLogger>(); // Changed to Singleton
+                services.AddSingleton<IErrorLogger, MockErrorLogger>(); // Changed to Singleton
+                services.AddSingleton<IAuditLogger, MockAuditLogger>(); // Changed to Singleton
 
                 // Remove all health check services and add a simple one that always returns healthy
                 services.RemoveAll(typeof(Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck));
@@ -118,7 +119,6 @@ public class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>
 
         return projectPath;
     }
-
 
     protected async Task<T?> PostJsonAsync<T>(string requestUri, object data)
     {

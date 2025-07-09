@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Tests\Mocks\MockServices.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Core ASP.NET Core packages -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
