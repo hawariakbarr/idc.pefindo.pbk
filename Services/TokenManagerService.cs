@@ -99,31 +99,8 @@ public class TokenManagerService : ITokenManagerService
         {
             _logger.LogInformation("Requesting new token from Pefindo API, correlation: {CorrelationId}", correlationId);
 
-            // DEBUG: 
-            bool isDummy = true;
-
-            JsonSerializerOptions _jsonOptions = new()
-             {
-                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                 PropertyNameCaseInsensitive = true
-             };
-
-            // If you want to use a dummy token for testing, set isDummy to true
-            var tokenObject = new PefindoTokenResponse
-            {
-                Code = "01",
-                Message = "Token Aktif",
-                Status = "Success",
-                Data = new PefindoTokenData
-                {
-                    Token = "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiOiAiY2xpZW50X2lkIn0.eyJzdWIiOiJwYmtfdXNlciIsImF1dGhvcml0aWVzIjpbIl9fcm9vdF9fIl0sImlzcyI6InBlZmluZG8iLCJqdGkiOiI5N2QyYjE3Ny1mYjQxLTQ4MzAtOTc5YS1iZDY3M2U4Mjk3YjkiLCJleHBpcmVkX3VzZXJuYW1lIjoiUEJLU1dPUkQxMjM0IiwiaWF0IjoxNjg5NTU4MDk5fQ.7b7",
-                    ValidDate = "20301231235959" // Example valid date in expected format
-                }
-            };
-
-            var tokenResponse = isDummy
-                ? JsonSerializer.Serialize(tokenObject, _jsonOptions) 
-                : await _pefindoApiService.GetTokenAsync();
+            // Get token from API service
+            var tokenResponse = await _pefindoApiService.GetTokenAsync();
             
             // Create cache entry with proper expiry
             var cacheEntry = CreateTokenCacheEntry(tokenResponse);

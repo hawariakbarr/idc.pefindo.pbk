@@ -152,6 +152,9 @@ public class PefindoSearchData
     [JsonPropertyName("alamat")]
     public string Alamat { get; set; } = string.Empty;
     
+    [JsonPropertyName("npwp")]
+    public string Npwp { get; set; } = string.Empty;
+    
     [JsonPropertyName("response_status")]
     public string ResponseStatus { get; set; } = string.Empty;
 }
@@ -249,6 +252,9 @@ public class PefindoReportData
     [JsonPropertyName("facilities")]
     public List<PefindoFacility> Facilities { get; set; } = new();
     
+    [JsonPropertyName("fasilitas")]
+    public List<PefindoFasilitas> Fasilitas { get; set; } = new();
+    
     [JsonPropertyName("collaterals")]
     public List<PefindoCollateral> Collaterals { get; set; } = new();
     
@@ -261,17 +267,35 @@ public class PefindoReportData
 /// </summary>
 public class PefindoReportHeader
 {
-    [JsonPropertyName("report_id")]
-    public string ReportId { get; set; } = string.Empty;
+    [JsonPropertyName("id_report")]
+    public string IdReport { get; set; } = string.Empty;
     
-    [JsonPropertyName("inquiry_reason")]
-    public string InquiryReason { get; set; } = string.Empty;
-    
-    [JsonPropertyName("request_time")]
-    public string RequestTime { get; set; } = string.Empty;
+    [JsonPropertyName("idscore_id")]
+    public string IdscoreId { get; set; } = string.Empty;
     
     [JsonPropertyName("username")]
     public string Username { get; set; } = string.Empty;
+    
+    [JsonPropertyName("tgl_permintaan")]
+    public DateTime TglPermintaan { get; set; }
+    
+    [JsonPropertyName("no_referensi_dokumen")]
+    public string NoReferensiDokumen { get; set; } = string.Empty;
+    
+    [JsonPropertyName("ktp")]
+    public string Ktp { get; set; } = string.Empty;
+    
+    [JsonPropertyName("npwp")]
+    public string Npwp { get; set; } = string.Empty;
+    
+    [JsonPropertyName("nama_debitur")]
+    public string NamaDebitur { get; set; } = string.Empty;
+    
+    [JsonPropertyName("tanggal_lahir")]
+    public DateTime TanggalLahir { get; set; }
+    
+    [JsonPropertyName("tempat_lahir")]
+    public string TempatLahir { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -284,6 +308,12 @@ public class PefindoDebiturInfo
     
     [JsonPropertyName("nama_debitur")]
     public string NamaDebitur { get; set; } = string.Empty;
+    
+    [JsonPropertyName("alamat_debitur")]
+    public string AlamatDebitur { get; set; } = string.Empty;
+    
+    [JsonPropertyName("email")]
+    public string Email { get; set; } = string.Empty;
     
     [JsonPropertyName("tanggal_lahir")]
     public string TanggalLahir { get; set; } = string.Empty;
@@ -333,6 +363,12 @@ public class PefindoDebiturInfo
     [JsonPropertyName("bulan_kualitas_kredit_terakhir")]
     public string BulanKualitasKreditTerakhir { get; set; } = string.Empty;
 
+    [JsonPropertyName("total_baki_debet")]
+    public decimal TotalBakiDebet { get; set; }
+
+    [JsonPropertyName("total_nilai_agunan")]
+    public decimal TotalNilaiAgunan { get; set; }
+
 }
 
 /// <summary>
@@ -360,6 +396,39 @@ public class PefindoFacility
 }
 
 /// <summary>
+/// Indonesian facility information (Fasilitas)
+/// </summary>
+public class PefindoFasilitas
+{
+    [JsonPropertyName("id_fasilitas")]
+    public long IdFasilitas { get; set; }
+    
+    [JsonPropertyName("jenis_fasilitas")]
+    public string JenisFasilitas { get; set; } = string.Empty;
+    
+    [JsonPropertyName("nama_bank")]
+    public string NamaBank { get; set; } = string.Empty;
+    
+    [JsonPropertyName("plafon")]
+    public decimal Plafon { get; set; }
+    
+    [JsonPropertyName("baki_debet")]
+    public decimal BakiDebet { get; set; }
+    
+    [JsonPropertyName("dpd_current")]
+    public int DpdCurrent { get; set; }
+    
+    [JsonPropertyName("kualitas_kredit")]
+    public string KualitasKredit { get; set; } = string.Empty;
+    
+    [JsonPropertyName("tanggal_mulai")]
+    public DateTime TanggalMulai { get; set; }
+    
+    [JsonPropertyName("tanggal_berakhir")]
+    public DateTime TanggalBerakhir { get; set; }
+}
+
+/// <summary>
 /// Collateral information
 /// </summary>
 public class PefindoCollateral
@@ -384,6 +453,9 @@ public class PefindoScoreInfo
     
     [JsonPropertyName("risk_desc")]
     public string RiskDesc { get; set; } = string.Empty;
+    
+    [JsonPropertyName("score_date")]
+    public string ScoreDate { get; set; } = string.Empty;
 }
 
 #endregion

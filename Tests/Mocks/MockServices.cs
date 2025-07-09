@@ -121,26 +121,98 @@ public class MockPbkDataRepository : IPbkDataRepository
 
 public class MockPefindoApiService : IPefindoApiService
 {
+    private readonly Dictionary<string, string> _eventIdToInquiryId = new();
+    private readonly Dictionary<string, DateTime> _eventIdToCreatedTime = new();
+    private readonly Dictionary<string, bool> _eventIdToReportReady = new();
+    
     public Task<string> GetTokenAsync()
-        => Task.FromResult($$"""
+    {
+        // Simulate different scenarios based on current time for testing
+        var now = DateTime.UtcNow;
+        
+        // Simulate token generation success (most common case)
+        if (now.Millisecond % 100 < 85) // 85% success rate
         {
-            "code": "01",
-            "status": "success",
-            "message": "Token aktif",
-            "data": {
-                "valid_date": "{{DateTime.UtcNow.AddHours(1):yyyy}}{{DateTime.UtcNow.AddHours(1).DayOfYear:D3}}{{DateTime.UtcNow.AddHours(1):HHmmss}}00",
-                "token": "mock_token_12345_{{DateTime.UtcNow.Ticks}}"
+            return Task.FromResult($$"""
+            {
+                "code": "01",
+                "status": "success",
+                "message": "Token aktif",
+                "data": {
+                    "valid_date": "{{DateTime.UtcNow.AddHours(1):yyyy}}{{DateTime.UtcNow.AddHours(1).DayOfYear:D3}}{{DateTime.UtcNow.AddHours(1):HHmmss}}00",
+                    "token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5SFh...mock_token_{{DateTime.UtcNow.Ticks}}"
+                }
             }
+            """);
+        }
+        
+        // Simulate authentication failure (10% chance)
+        if (now.Millisecond % 100 < 95)
+        {
+            return Task.FromResult("""
+            {
+                "code": "13",
+                "status": "failed",
+                "message": "username atau password salah"
+            }
+            """);
+        }
+        
+        // Simulate IP access denied (5% chance)
+        return Task.FromResult("""
+        {
+            "code": "17",
+            "status": "failed",
+            "message": "akses ditolak"
         }
         """);
+    }
 
     public Task<bool> ValidateTokenAsync(string token)
-        => Task.FromResult(!string.IsNullOrEmpty(token) && (token.StartsWith("mock_token_") || token.Contains("test-token") || token.Contains("cached-token") || token.Contains("valid-token") || token.Contains("info-token") || token.Contains("token-to-invalidate")));
+    {
+        // Simulate token validation
+        if (string.IsNullOrEmpty(token))
+            return Task.FromResult(false);
+            
+        // Valid tokens: mock tokens, test tokens, and specific test patterns
+        var isValid = token.StartsWith("mock_token_") || 
+                     token.StartsWith("eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5SFh") ||
+                     token.Contains("test-token") || 
+                     token.Contains("cached-token") || 
+                     token.Contains("valid-token") || 
+                     token.Contains("info-token") || 
+                     token.Contains("token-to-invalidate");
+                     
+        return Task.FromResult(isValid);
+    }
 
     public Task<PefindoSearchResponse> SearchDebtorAsync(PefindoSearchRequest request, string token)
     {
-        // Simulate different responses based on test data
-        if (request.Params.Any(p => p.IdNo == "1234567890123456"))
+        // Validate token first
+        if (!ValidateTokenAsync(token).Result)
+        {
+            return Task.FromResult(new PefindoSearchResponse
+            {
+                Code = "06",
+                Status = "failed",
+                Message = "Invalid Token"
+            });
+        }
+        
+        // Simulate various search scenarios based on test data
+        var firstParam = request.Params.FirstOrDefault();
+        if (firstParam == null)
+        {
+            return Task.FromResult(new PefindoSearchResponse
+            {
+                Code = "21",
+                Status = "failed",
+                Message = "Parameter wajib diisi"
+            });
+        }
+        
+        // Test case 1: Perfect match scenario (KTP: 1234567890123456)
+        if (firstParam.IdNo == "1234567890123456")
         {
             return Task.FromResult(new PefindoSearchResponse
             {
@@ -152,17 +224,119 @@ public class MockPefindoApiService : IPefindoApiService
                 {
                     new()
                     {
-                        IdPefindo = 9999999,
-                        SimilarityScore = 95.5m,
-                        NamaDebitur = "John Doe",
+                        IdPefindo = 101110967000498,
+                        SimilarityScore = 100.0m,
+                        NamaDebitur = "INDIVIDU 101110967000498",
                         IdNo = "1234567890123456",
                         IdType = "KTP",
+                        TanggalLahir = "1967-09-11",
+                        Npwp = "101110967000498",
+                        Alamat = "ALAMAT 101110967000498",
+                        NamaGadisIbuKandung = "IBU 101110967000498",
                         ResponseStatus = "ALL_CORRECT"
                     }
                 }
             });
         }
-
+        
+        // Test case 2: Multiple matches with different similarity scores
+        if (firstParam.IdNo == "3101110967000498")
+        {
+            return Task.FromResult(new PefindoSearchResponse
+            {
+                Code = "01",
+                Status = "success",
+                Message = "Data ditemukan",
+                InquiryId = 318,
+                Data = new List<PefindoSearchData>
+                {
+                    new()
+                    {
+                        IdPefindo = 101110967000498,
+                        SimilarityScore = 100.0m,
+                        NamaDebitur = "INDIVIDU 101110967000498",
+                        IdNo = "3101110967000498",
+                        IdType = "KTP",
+                        TanggalLahir = "1967-09-11",
+                        Npwp = "101110967000498",
+                        Alamat = "ALAMAT 101110967000498",
+                        NamaGadisIbuKandung = "IBU 101110967000498",
+                        ResponseStatus = "ALL_CORRECT"
+                    },
+                    new()
+                    {
+                        IdPefindo = 101110967000499,
+                        SimilarityScore = 85.5m,
+                        NamaDebitur = "INDIVIDU SERUPA 101110967000499",
+                        IdNo = "3101110967000499",
+                        IdType = "KTP",
+                        TanggalLahir = "1967-09-12",
+                        Npwp = "101110967000499",
+                        Alamat = "ALAMAT SERUPA 101110967000499",
+                        NamaGadisIbuKandung = "IBU SERUPA 101110967000499",
+                        ResponseStatus = "SIMILARITY_CHECK_REQUIRED"
+                    }
+                }
+            });
+        }
+        
+        // Test case 3: Low similarity match
+        if (firstParam.IdNo == "9999999999999999")
+        {
+            return Task.FromResult(new PefindoSearchResponse
+            {
+                Code = "01",
+                Status = "success",
+                Message = "Data ditemukan",
+                InquiryId = 999,
+                Data = new List<PefindoSearchData>
+                {
+                    new()
+                    {
+                        IdPefindo = 999999999,
+                        SimilarityScore = 65.0m,
+                        NamaDebitur = "NAMA BERBEDA",
+                        IdNo = "9999999999999999",
+                        IdType = "KTP",
+                        TanggalLahir = "1990-01-01",
+                        Npwp = "999999999",
+                        Alamat = "ALAMAT BERBEDA",
+                        NamaGadisIbuKandung = "IBU BERBEDA",
+                        ResponseStatus = "LOW_SIMILARITY"
+                    }
+                }
+            });
+        }
+        
+        // Test case 4: Corporate search (NPWP)
+        if (firstParam.IdType == "NPWP" && firstParam.IdNo == "555666777888999")
+        {
+            return Task.FromResult(new PefindoSearchResponse
+            {
+                Code = "01",
+                Status = "success",
+                Message = "Data ditemukan",
+                InquiryId = 777,
+                Data = new List<PefindoSearchData>
+                {
+                    new()
+                    {
+                        IdPefindo = 555666777888999,
+                        SimilarityScore = 95.0m,
+                        NamaDebitur = "PT PERTAMBANGAN INDONESIA",
+                        IdNo = "555666777888999",
+                        IdType = "NPWP",
+                        TanggalLahir = null,
+                        Npwp = "555666777888999",
+                        Alamat = "JAKARTA SELATAN",
+                        NamaGadisIbuKandung = null,
+                        ResponseStatus = "ALL_CORRECT"
+                    }
+                }
+            });
+        }
+        
+        // Default case: Data not found
         return Task.FromResult(new PefindoSearchResponse
         {
             Code = "31",
@@ -172,16 +346,97 @@ public class MockPefindoApiService : IPefindoApiService
     }
 
     public Task<PefindoReportResponse> GenerateReportAsync(PefindoReportRequest request, string token)
-        => Task.FromResult(new PefindoReportResponse
+    {
+        // Validate token
+        if (!ValidateTokenAsync(token).Result)
+        {
+            return Task.FromResult(new PefindoReportResponse
+            {
+                Code = "06",
+                Status = "failed",
+                Message = "Invalid Token"
+            });
+        }
+        
+        // Check if event_id already exists
+        if (_eventIdToInquiryId.ContainsKey(request.EventId))
+        {
+            return Task.FromResult(new PefindoReportResponse
+            {
+                Code = "35",
+                Status = "failed",
+                EventId = request.EventId,
+                Message = "event_id sudah ada, gunakan yang lain"
+            });
+        }
+        
+        // Store event_id mapping
+        _eventIdToInquiryId[request.EventId] = request.InquiryId.ToString();
+        _eventIdToCreatedTime[request.EventId] = DateTime.UtcNow;
+        _eventIdToReportReady[request.EventId] = false;
+        
+        // Mark report as ready after a short delay (simulate async processing)
+        Task.Delay(100).ContinueWith(_ => _eventIdToReportReady[request.EventId] = true);
+        
+        return Task.FromResult(new PefindoReportResponse
         {
             Code = "01",
             Status = "success",
             EventId = request.EventId,
             Message = "Proses membuat report sedang dikerjakan"
         });
+    }
 
     public Task<PefindoGetReportResponse> GetReportAsync(string eventId, string token)
-        => Task.FromResult(new PefindoGetReportResponse
+    {
+        // Validate token
+        if (!ValidateTokenAsync(token).Result)
+        {
+            return Task.FromResult(new PefindoGetReportResponse
+            {
+                Code = "06",
+                Status = "failed",
+                Message = "Invalid Token"
+            });
+        }
+        
+        // Check if event_id exists
+        if (!_eventIdToInquiryId.ContainsKey(eventId))
+        {
+            return Task.FromResult(new PefindoGetReportResponse
+            {
+                Code = "34",
+                Status = "failed",
+                Message = "Request id tidak ditemukan"
+            });
+        }
+        
+        // Check if report is still processing
+        if (!_eventIdToReportReady.GetValueOrDefault(eventId, false))
+        {
+            return Task.FromResult(new PefindoGetReportResponse
+            {
+                Code = "32",
+                Status = "processing",
+                EventId = eventId,
+                Message = "Laporan masih dalam proses scoring"
+            });
+        }
+        
+        // Simulate big report scenario (5% chance)
+        if (eventId.Contains("big-report") || DateTime.UtcNow.Millisecond % 100 < 5)
+        {
+            return Task.FromResult(new PefindoGetReportResponse
+            {
+                Code = "36",
+                Status = "success",
+                EventId = eventId,
+                Message = "Kategori big report, gunakan method downloadReport"
+            });
+        }
+        
+        // Return complete report with comprehensive data
+        return Task.FromResult(new PefindoGetReportResponse
         {
             Code = "01",
             Status = "success",
@@ -189,30 +444,142 @@ public class MockPefindoApiService : IPefindoApiService
             Message = "Laporan berhasil dibuat",
             Report = new PefindoReportData
             {
+                Header = new PefindoReportHeader
+                {
+                    IdReport = Guid.NewGuid().ToString(),
+                    IdscoreId = "SC123456",
+                    Username = "pbk_user",
+                    TglPermintaan = DateTime.UtcNow,
+                    NoReferensiDokumen = "REF-" + eventId,
+                    Ktp = "1234567890123456",
+                    Npwp = "101110967000498",
+                    NamaDebitur = "INDIVIDU 101110967000498",
+                    TanggalLahir = DateTime.Parse("1967-09-11"),
+                    TempatLahir = "JAKARTA"
+                },
                 Debitur = new PefindoDebiturInfo
                 {
-                    IdPefindo = 9999999,
-                    NamaDebitur = "John Doe",
-                    JmlFasilitas = 3,
+                    IdPefindo = 101110967000498,
+                    NamaDebitur = "INDIVIDU 101110967000498",
+                    AlamatDebitur = "ALAMAT 101110967000498",
+                    Email = "individu@email.com",
+                    NamaGadisIbuKandung = "IBU 101110967000498",
+                    JmlFasilitas = 5,
                     MaxCurrDpd = 0,
                     MaxOverdueLast12Months = 0,
-                    JmlPlafon = 100000m,
-                    TotalAngsuranAktif = 25000m
+                    JmlPlafon = 500000m,
+                    TotalAngsuranAktif = 75000m,
+                    WoContract = 0,
+                    KualitasKreditTerburuk = "1",
+                    TotalBakiDebet = 425000m,
+                    TotalNilaiAgunan = 600000m
                 },
                 ScoreInfo = new PefindoScoreInfo
                 {
                     Score = "750",
                     RiskGrade = "A",
-                    RiskDesc = "Low Risk"
+                    RiskDesc = "Low Risk",
+                    ScoreDate = DateTime.UtcNow.ToString("yyyy-MM-dd")
+                },
+                Fasilitas = new List<PefindoFasilitas>
+                {
+                    new()
+                    {
+                        IdFasilitas = 1,
+                        JenisFasilitas = "KREDIT",
+                        NamaBank = "BANK MANDIRI",
+                        Plafon = 200000m,
+                        BakiDebet = 150000m,
+                        DpdCurrent = 0,
+                        KualitasKredit = "1",
+                        TanggalMulai = DateTime.UtcNow.AddYears(-2),
+                        TanggalBerakhir = DateTime.UtcNow.AddYears(3)
+                    },
+                    new()
+                    {
+                        IdFasilitas = 2,
+                        JenisFasilitas = "KARTU KREDIT",
+                        NamaBank = "BANK BCA",
+                        Plafon = 50000m,
+                        BakiDebet = 25000m,
+                        DpdCurrent = 0,
+                        KualitasKredit = "1",
+                        TanggalMulai = DateTime.UtcNow.AddYears(-1),
+                        TanggalBerakhir = DateTime.UtcNow.AddYears(2)
+                    }
                 }
             }
         });
+    }
 
     public Task<PefindoGetReportResponse> DownloadReportAsync(string eventId, string token, int? page = null, int? maxRecords = null)
-        => GetReportAsync(eventId, token);
+    {
+        // This is for big reports - return the same structure but with pagination info
+        var response = GetReportAsync(eventId, token).Result;
+        
+        if (response.Code == "01")
+        {
+            // Add pagination metadata to message
+            response.Message = $"Laporan berhasil dibuat (Page: {page ?? 1}, MaxRecords: {maxRecords ?? 100})";
+        }
+        
+        return Task.FromResult(response);
+    }
 
     public Task<byte[]> DownloadPdfReportAsync(string eventId, string token)
-        => Task.FromResult(Encoding.UTF8.GetBytes($"Mock PDF Report for event {eventId}"));
+    {
+        // Validate token
+        if (!ValidateTokenAsync(token).Result)
+        {
+            return Task.FromResult(Encoding.UTF8.GetBytes("Invalid Token"));
+        }
+        
+        // Check if event_id exists
+        if (!_eventIdToInquiryId.ContainsKey(eventId))
+        {
+            return Task.FromResult(Encoding.UTF8.GetBytes("Request id tidak ditemukan"));
+        }
+        
+        // Generate mock PDF content
+        var pdfContent = $@"%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
+endobj
+
+4 0 obj
+<< /Length 44 >>
+stream
+BT
+/F1 12 Tf
+100 700 Td
+(PEFINDO PBK Report - Event: {eventId}) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000206 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+294
+%%EOF";
+        
+        return Task.FromResult(Encoding.UTF8.GetBytes(pdfContent));
+    }
 }
 
 // Mock logging services
