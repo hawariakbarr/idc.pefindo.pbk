@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using System.Net.Sockets;
 
 namespace idc.pefindo.pbk.Services;
 
@@ -20,6 +21,7 @@ public class PefindoApiService : IPefindoApiService
     private readonly ILogger<PefindoApiService> _logger;
     private readonly IErrorLogger _errorLogger;
     private readonly ICorrelationService _correlationService;
+    private readonly IDummyResponseService? _dummyResponseService;
 
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -32,13 +34,15 @@ public class PefindoApiService : IPefindoApiService
         IOptions<PefindoConfig> config,
         ILogger<PefindoApiService> logger,
         IErrorLogger errorLogger,
-        ICorrelationService correlationService)
+        ICorrelationService correlationService,
+        IDummyResponseService? dummyResponseService = null)
     {
         _httpClient = httpClient;
         _config = config.Value;
         _logger = logger;
         _errorLogger = errorLogger;
         _correlationService = correlationService;
+        _dummyResponseService = dummyResponseService;
 
         ConfigureHttpClient();
     }
@@ -53,6 +57,19 @@ public class PefindoApiService : IPefindoApiService
     public async Task<string> GetTokenAsync()
     {
         var correlationId = _correlationService.GetCorrelationId();
+
+        // If configured to use dummy responses, use them directly
+        if (_config.UseDummyResponses && _dummyResponseService != null)
+        {
+            _logger.LogInformation("Using dummy response for token request, correlation: {CorrelationId}", correlationId);
+            
+            if (!_dummyResponseService.IsLoaded)
+            {
+                await _dummyResponseService.LoadDummyResponsesAsync();
+            }
+            
+            return _dummyResponseService.GetTokenResponse("success");
+        }
 
         try
         {
@@ -88,10 +105,20 @@ public class PefindoApiService : IPefindoApiService
             _logger.LogInformation("Successfully obtained token from Pefindo API, correlation: {CorrelationId}", correlationId);
             return content; // Return raw JSON for proper parsing in TokenManagerService
         }
-        catch (HttpRequestException httpEx)
+        catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
         {
-            await _errorLogger.LogErrorAsync("PefindoApiService.GetToken", "HTTP request error while getting token", httpEx, correlationId);
-            throw;
+            return await HandleConnectionErrorWithFallback(httpEx, correlationId, "token", () => 
+                _dummyResponseService?.GetTokenResponse("success"));
+        }
+        catch (SocketException socketEx)
+        {
+            return await HandleConnectionErrorWithFallback(socketEx, correlationId, "token", () => 
+                _dummyResponseService?.GetTokenResponse("success"));
+        }
+        catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
+        {
+            return await HandleConnectionErrorWithFallback(timeoutEx, correlationId, "token", () => 
+                _dummyResponseService?.GetTokenResponse("success"));
         }
         catch (Exception ex)
         {
@@ -338,5 +365,54 @@ public class PefindoApiService : IPefindoApiService
                 $"Error downloading PDF report for event ID: {eventId}", ex, correlationId);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Check if the exception is a connection-related error
+    /// </summary>
+    private static bool IsConnectionError(Exception ex)
+    {
+        return ex.Message.Contains("connection") ||
+               ex.Message.Contains("timeout") ||
+               ex.Message.Contains("failed to respond") ||
+               ex.Message.Contains("connected host has failed") ||
+               ex.InnerException is SocketException;
+    }
+
+    /// <summary>
+    /// Handle connection errors with fallback to dummy responses
+    /// </summary>
+    private async Task<string> HandleConnectionErrorWithFallback(Exception ex, string correlationId, string operation, Func<string?> getDummyResponse)
+    {
+        var errorMessage = $"Connection error during {operation} operation: {ex.Message}";
+        await _errorLogger.LogErrorAsync($"PefindoApiService.{operation}", errorMessage, ex, correlationId);
+
+        // Try to use dummy response as fallback
+        if (_dummyResponseService != null)
+        {
+            try
+            {
+                if (!_dummyResponseService.IsLoaded)
+                {
+                    await _dummyResponseService.LoadDummyResponsesAsync();
+                }
+
+                var dummyResponse = getDummyResponse();
+                if (!string.IsNullOrEmpty(dummyResponse))
+                {
+                    _logger.LogWarning("Using dummy response fallback for {Operation} due to connection error, correlation: {CorrelationId}", 
+                        operation, correlationId);
+                    return dummyResponse;
+                }
+            }
+            catch (Exception dummyEx)
+            {
+                _logger.LogError(dummyEx, "Failed to load dummy response for {Operation} fallback, correlation: {CorrelationId}", 
+                    operation, correlationId);
+            }
+        }
+
+        // If no dummy response is available, rethrow the original exception
+        throw ex;
     }
 }

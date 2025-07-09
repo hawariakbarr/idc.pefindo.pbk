@@ -1,0 +1,428 @@
+{
+  "getToken": {
+    "success": {
+      "code": "01",
+      "status": "success",
+      "message": "Token aktif",
+      "data": {
+        "valid_date": "2024261509242633",
+        "token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5SFhteUtaMVRVTmZHN2hLU2FRaU5FUUFsMUpiRlVIQXNfVHBpSTc4OHNFIiwidHlwIiA6IEpXVCJ9.eyJzdWIiOiJwYmtfdXNlciIsImF1dGhvcml0aWVzIjpbIl9fcm9vdF9fIl0sImlzcyI6InBlZmluZG8iLCJqdGkiOiI5N2QyYjE3Ny1mYjQxLTQ4MzAtOTc5YS1iZDY3M2U4Mjk3YjkiLCJleHBpcmVkX3VzZXJuYW1lIjoiUEJLU1dPUkQxMjM0IiwiaWF0IjoxNjg5NTU4MDk5fQ.K5mfUGQ"
+      }
+    },
+    "authenticationFailed": {
+      "code": "13",
+      "status": "failed",
+      "message": "username atau password salah"
+    },
+    "ipBlocked": {
+      "code": "17",
+      "status": "failed",
+      "message": "akses ditolak"
+    },
+    "serverError": {
+      "code": "99",
+      "status": "failed",
+      "message": "Internal server error - system maintenance"
+    },
+    "accountInactive": {
+      "code": "14",
+      "status": "failed",
+      "message": "Akun tidak aktif"
+    }
+  },
+  "validateToken": {
+    "success": {
+      "code": "01",
+      "status": "success",
+      "message": "authorized"
+    },
+    "invalidToken": {
+      "code": "06",
+      "status": "failed",
+      "message": "Invalid Token"
+    },
+    "expiredToken": {
+      "code": "16",
+      "status": "failed",
+      "message": "Token expired"
+    }
+  },
+  "search": {
+    "perfectMatch": {
+      "code": "01",
+      "status": "Success",
+      "message": "Data ditemukan",
+      "inquiry_id": 318,
+      "data": [
+        {
+          "similarity_score": 100.00,
+          "id_pefindo": 101110967000498,
+          "id_type": "KTP",
+          "id_no": "3101110967000498",
+          "id_tipe_debitur": "PERSONAL",
+          "nama_debitur": "INDIVIDU 101110967000498",
+          "tanggal_lahir": "1967-09-11",
+          "npwp": "101110967000498",
+          "alamat": "ALAMAT 101110967000498",
+          "nama_gadis_ibu_kandung": "IBU 101110967000498",
+          "response_status": "ALL_CORRECT"
+        }
+      ]
+    },
+    "multipleMatches": {
+      "code": "01",
+      "status": "Success",
+      "message": "Data ditemukan",
+      "inquiry_id": 319,
+      "data": [
+        {
+          "similarity_score": 100.00,
+          "id_pefindo": 101110967000498,
+          "id_type": "KTP",
+          "id_no": "3101110967000498",
+          "id_tipe_debitur": "PERSONAL",
+          "nama_debitur": "INDIVIDU 101110967000498",
+          "tanggal_lahir": "1967-09-11",
+          "npwp": "101110967000498",
+          "alamat": "ALAMAT 101110967000498",
+          "nama_gadis_ibu_kandung": "IBU 101110967000498",
+          "response_status": "ALL_CORRECT"
+        },
+        {
+          "similarity_score": 85.5,
+          "id_pefindo": 101110967000499,
+          "id_type": "KTP",
+          "id_no": "3101110967000499",
+          "id_tipe_debitur": "PERSONAL",
+          "nama_debitur": "INDIVIDU MIRIP 101110967000499",
+          "tanggal_lahir": "1967-09-12",
+          "npwp": "101110967000499",
+          "alamat": "ALAMAT MIRIP 101110967000499",
+          "nama_gadis_ibu_kandung": "IBU MIRIP 101110967000499",
+          "response_status": "SIMILARITY_CHECK_REQUIRED"
+        }
+      ]
+    },
+    "lowSimilarity": {
+      "code": "01",
+      "status": "Success",
+      "message": "Data ditemukan",
+      "inquiry_id": 320,
+      "data": [
+        {
+          "similarity_score": 65.0,
+          "id_pefindo": 999999999,
+          "id_type": "KTP",
+          "id_no": "9999999999999999",
+          "id_tipe_debitur": "PERSONAL",
+          "nama_debitur": "NAMA BERBEDA",
+          "tanggal_lahir": "1990-01-01",
+          "npwp": "999999999",
+          "alamat": "ALAMAT BERBEDA",
+          "nama_gadis_ibu_kandung": "IBU BERBEDA",
+          "response_status": "LOW_SIMILARITY"
+        }
+      ]
+    },
+    "corporateMatch": {
+      "code": "01",
+      "status": "Success",
+      "message": "Data ditemukan",
+      "inquiry_id": 777,
+      "data": [
+        {
+          "similarity_score": 95.0,
+          "id_pefindo": 555666777888999,
+          "id_type": "NPWP",
+          "id_no": "555666777888999",
+          "id_tipe_debitur": "CORPORATE",
+          "nama_debitur": "PT PERTAMBANGAN INDONESIA",
+          "tanggal_lahir": null,
+          "npwp": "555666777888999",
+          "alamat": "JAKARTA SELATAN",
+          "nama_gadis_ibu_kandung": null,
+          "response_status": "ALL_CORRECT"
+        }
+      ]
+    },
+    "dataNotFound": {
+      "code": "31",
+      "status": "failed",
+      "message": "Data tidak ditemukan"
+    },
+    "invalidToken": {
+      "code": "06",
+      "status": "failed",
+      "message": "Invalid Token"
+    },
+    "missingParameter": {
+      "code": "21",
+      "status": "failed",
+      "message": "Parameter wajib diisi"
+    },
+    "invalidParameter": {
+      "code": "22",
+      "status": "failed",
+      "message": "Parameter tidak sesuai"
+    }
+  },
+  "generateReport": {
+    "success": {
+      "code": "01",
+      "status": "success",
+      "event_id": "451bd8bd-19dd-4605-bd05-a92971892a47",
+      "message": "Proses membuat report sedang dikerjakan"
+    },
+    "duplicateEventId": {
+      "code": "35",
+      "status": "failed",
+      "event_id": "451bd8bd-19dd-4605-bd05-a92971892a47",
+      "message": "event_id sudah ada, gunakan yang lain"
+    },
+    "invalidToken": {
+      "code": "06",
+      "status": "failed",
+      "message": "Invalid Token"
+    },
+    "missingParameter": {
+      "code": "21",
+      "status": "failed",
+      "message": "Parameter wajib diisi"
+    }
+  },
+  "getReport": {
+    "successComplete": {
+      "code": "01",
+      "status": "success",
+      "event_id": "451bd8bd-19dd-4605-bd05-a92971892a47",
+      "message": "Laporan berhasil dibuat",
+      "report": {
+        "header": {
+          "id_report": "RPT-2024-001234",
+          "idscore_id": "SC123456",
+          "username": "pbk_user",
+          "tgl_permintaan": "2024-03-06T10:30:00Z",
+          "id_tujuan_permintaan": "48",
+          "id_tipe_debitur": 1,
+          "no_referensi_dokumen": "REF-451bd8bd-19dd-4605-bd05-a92971892a47",
+          "ktp": "3101110967000498",
+          "npwp": "101110967000498",
+          "nama_debitur": "INDIVIDU 101110967000498",
+          "tanggal_lahir": "1967-09-11T00:00:00Z",
+          "tempat_lahir": "JAKARTA",
+          "tanggal_pendirian": null,
+          "tempat_pendirian": null,
+          "fasilitas_kredit_tidak_tampil": "0",
+          "fasilitas_joint_account_tidak_tampil": "0",
+          "fasilitas_surat_berharga_tidak_tampil": "0",
+          "fasilitas_irrevocable_lc_tidak_tampil": "0",
+          "fasilitas_garansi_tidak_tampil": "0",
+          "fasilitas_lain_tidak_tampil": "0"
+        },
+        "debitur": {
+          "alamat_debitur": "ALAMAT 101110967000498",
+          "alamat_tempat_bekerja": "JL SUDIRMAN NO 123 JAKARTA",
+          "email": "individu@email.com",
+          "go_public": null,
+          "id_debitur_golden_record": 101110967000498,
+          "id_golongan_debitur": 1,
+          "id_jenis_badan_usaha": null,
+          "id_jenis_identitas": 1,
+          "id_jenis_kelamin": 1,
+          "id_kabupaten_kota": 3171,
+          "id_kantor_cabang": 1,
+          "id_lembaga_pemeringkat": 1,
+          "id_lokasi": 1,
+          "id_negara": 360,
+          "id_sektor_ekonomi": 65,
+          "id_status_gelar": 1,
+          "id_status_perkawinan": 2,
+          "id_tipe_debitur": 1,
+          "kecamatan": "GAMBIR",
+          "kelurahan": "GAMBIR",
+          "nama_alias": null,
+          "nama_badan_usaha": null,
+          "nama_gadis_ibu_kandung": "IBU 101110967000498",
+          "nama_group": null,
+          "nama_lengkap_debitur": "INDIVIDU 101110967000498",
+          "nama_sesuai_identitas": "INDIVIDU 101110967000498",
+          "nomor_akta_pendirian": null,
+          "nomor_akta_perubahan_terakhir": null,
+          "nomor_identitas": "3101110967000498",
+          "npwp": "101110967000498",
+          "peringkat_atau_rating_debitur": "A",
+          "jml_fasilitas": 5,
+          "jml_tunggakan": 0,
+          "jml_plafon": 500000.00,
+          "total_angsuran_aktif": 75000.00,
+          "baki_debet_non_agunan": 350000.00,
+          "max_curr_dpd": 0,
+          "max_overdue_last12months": 0,
+          "wo_contract": 0,
+          "wo_agunan": 0,
+          "kualitas_kredit_terburuk": "1",
+          "bulan_kualitas_terburuk": "2024-02",
+          "baki_debet_kualitas_terburuk": 0.00,
+          "kualitas_kredit_terakhir": "1",
+          "bulan_kualitas_kredit_terakhir": "2024-03",
+          "total_baki_debet": 425000.00,
+          "total_nilai_agunan": 600000.00
+        },
+        "facilities": [
+          {
+            "facility_id": "FAC-001",
+            "facility_type": "KREDIT MODAL KERJA",
+            "plafon": 200000.00,
+            "baki_debet": 150000.00,
+            "kualitas_kredit": "1",
+            "current_dpd": 0
+          },
+          {
+            "facility_id": "FAC-002",
+            "facility_type": "KARTU KREDIT",
+            "plafon": 50000.00,
+            "baki_debet": 25000.00,
+            "kualitas_kredit": "1",
+            "current_dpd": 0
+          }
+        ],
+        "collaterals": [
+          {
+            "collateral_type": "TANAH DAN BANGUNAN",
+            "collateral_value": 600000.00
+          }
+        ],
+        "score_info": {
+          "score": "750",
+          "risk_grade": "A",
+          "risk_desc": "Low Risk",
+          "score_date": "2024-03-06"
+        }
+      }
+    },
+    "bigReport": {
+      "code": "36",
+      "status": "success",
+      "event_id": "451bd8bd-19dd-4605-bd05-a92971892a47",
+      "message": "Kategori big report, gunakan method downloadReport"
+    },
+    "processing": {
+      "code": "32",
+      "status": "processing",
+      "event_id": "451bd8bd-19dd-4605-bd05-a92971892a47",
+      "message": "Laporan masih dalam proses scoring"
+    },
+    "requestNotFound": {
+      "code": "34",
+      "status": "failed",
+      "event_id": "451bd8bd-19dd-4605-bd05-a92971892a47",
+      "message": "Request id tidak ditemukan"
+    },
+    "dataNotFound": {
+      "code": "31",
+      "status": "failed",
+      "message": "Data tidak ditemukan"
+    },
+    "similarityIgnored": {
+      "code": "33",
+      "status": "failed",
+      "event_id": "451bd8bd-19dd-4605-bd05-a92971892a47",
+      "message": "Laporan untuk data similarity tidak diproses/diabaikan"
+    },
+    "invalidToken": {
+      "code": "06",
+      "status": "failed",
+      "message": "Invalid Token"
+    }
+  },
+  "downloadReport": {
+    "success": {
+      "code": "01",
+      "status": "success",
+      "event_id": "451bd8bd-19dd-4605-bd05-a92971892a47",
+      "message": "Laporan berhasil dibuat (Big Report - Page: 1, MaxRecords: 100)",
+      "report": {
+        "header": {
+          "id_report": "RPT-2024-001235",
+          "idscore_id": "SC123457",
+          "username": "pbk_user",
+          "tgl_permintaan": "2024-03-06T10:30:00Z",
+          "id_tujuan_permintaan": "48",
+          "id_tipe_debitur": 1,
+          "no_referensi_dokumen": "REF-451bd8bd-19dd-4605-bd05-a92971892a47",
+          "ktp": "3101110967000498",
+          "npwp": "101110967000498",
+          "nama_debitur": "INDIVIDU BIG REPORT",
+          "tanggal_lahir": "1967-09-11T00:00:00Z",
+          "tempat_lahir": "JAKARTA"
+        },
+        "debitur": {
+          "alamat_debitur": "ALAMAT BIG REPORT",
+          "alamat_tempat_bekerja": "JL SUDIRMAN NO 456 JAKARTA",
+          "email": "bigreport@email.com",
+          "nama_gadis_ibu_kandung": "IBU BIG REPORT",
+          "nama_lengkap_debitur": "INDIVIDU BIG REPORT",
+          "jml_fasilitas": 50,
+          "jml_plafon": 5000000.00,
+          "total_angsuran_aktif": 750000.00,
+          "max_curr_dpd": 0,
+          "max_overdue_last12months": 0,
+          "wo_contract": 0,
+          "kualitas_kredit_terburuk": "1",
+          "total_baki_debet": 4250000.00,
+          "total_nilai_agunan": 6000000.00
+        },
+        "facilities": [],
+        "score_info": {
+          "score": "800",
+          "risk_grade": "AA",
+          "risk_desc": "Very Low Risk",
+          "score_date": "2024-03-06"
+        }
+      }
+    },
+    "requestNotFound": {
+      "code": "34",
+      "status": "failed",
+      "event_id": "451bd8bd-19dd-4605-bd05-a92971892a47",
+      "message": "Request id tidak ditemukan"
+    },
+    "invalidToken": {
+      "code": "06",
+      "status": "failed",
+      "message": "Invalid Token"
+    }
+  },
+  "downloadPdfReport": {
+    "success": {
+      "binaryData": "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>\nendobj\n\n4 0 obj\n<< /Length 110 >>\nstream\nBT\n/F1 12 Tf\n100 700 Td\n(PEFINDO PBK CREDIT REPORT) Tj\n0 -20 Td\n(Event ID: 451bd8bd-19dd-4605-bd05-a92971892a47) Tj\n0 -20 Td\n(Generated: 2024-03-06) Tj\nET\nendstream\nendobj\n\nxref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000206 00000 n \ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n364\n%%EOF"
+    },
+    "requestNotFound": {
+      "code": "34",
+      "status": "failed",
+      "message": "Request id tidak ditemukan"
+    },
+    "invalidToken": {
+      "code": "06",
+      "status": "failed",
+      "message": "Invalid Token"
+    }
+  },
+  "bulk": {
+    "success": {
+      "code": "01",
+      "status": "success",
+      "message": "Proses bulk sedang dikerjakan"
+    },
+    "invalidToken": {
+      "code": "06",
+      "status": "failed",
+      "message": "Invalid Token"
+    },
+    "missingParameter": {
+      "code": "21",
+      "status": "failed",
+      "message": "Parameter wajib diisi"
+    }
+  }
+}

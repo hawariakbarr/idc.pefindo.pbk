@@ -88,6 +88,14 @@ builder.Services.AddMemoryCache(options =>
 });
 
 
+// Register dummy response service
+builder.Services.AddSingleton<IDummyResponseService>(serviceProvider =>
+{
+    var logger = serviceProvider.GetRequiredService<ILogger<DummyResponseService>>();
+    var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<PefindoConfig>>().Value;
+    return new DummyResponseService(logger, config.DummyResponseFilePath);
+});
+
 // Register core services
 builder.Services.AddScoped<ICycleDayValidationService, CycleDayValidationService>();
 builder.Services.AddScoped<IPefindoApiService, PefindoApiService>();

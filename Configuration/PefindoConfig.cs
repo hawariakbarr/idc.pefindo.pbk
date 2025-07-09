@@ -10,6 +10,8 @@ public class PefindoConfig
     public string Password { get; set; } = string.Empty;
     public int TimeoutSeconds { get; set; } = 30;
     public string Domain { get; set; } = string.Empty;
+    public bool UseDummyResponses { get; set; } = false;
+    public string DummyResponseFilePath { get; set; } = "dummy-response.json";
 }
 
 /// <summary>
