@@ -39,14 +39,19 @@ jobs:
     - name: Create external DLL stubs
       run: |
         mkdir -p ./
-        # Create stub EncryptionApi.dll
+        # Create stub EncryptionApi.dll with correct interface
         cat > EncryptionApi.cs << 'EOF'
         using System;
         namespace EncryptionApi.Services
         {
-            public static class EncryptionService
+            public interface IEncryptionService
             {
-                public static string DecryptPassword(string encryptedPassword) => "stub_password";
+                string DecryptString(string encryptedPassword);
+            }
+            
+            public class EncryptionService : IEncryptionService
+            {
+                public string DecryptString(string encryptedPassword) => "ci_stub_password";
             }
         }
         EOF
@@ -63,16 +68,19 @@ jobs:
         }
         EOF
         
-        # Compile stubs
+        # Compile EncryptionApi stub
         dotnet new classlib -n EncryptionApi --force
-        cp EncryptionApi.cs EncryptionApi/Class1.cs
+        rm EncryptionApi/Class1.cs
+        cp EncryptionApi.cs EncryptionApi/EncryptionApi.cs
         dotnet build EncryptionApi/EncryptionApi.csproj -o ./
         
+        # Compile Helper stub
         dotnet new classlib -n Helper --force  
-        cp Helper.cs Helper/Class1.cs
+        rm Helper/Class1.cs
+        cp Helper.cs Helper/Helper.cs
         dotnet build Helper/Helper.csproj -o ./
         
-        # Clean up
+        # Clean up temporary files
         rm -rf EncryptionApi Helper EncryptionApi.cs Helper.cs
 
     - name: Create dummy response file
