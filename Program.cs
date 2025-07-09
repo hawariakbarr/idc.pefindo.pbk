@@ -220,6 +220,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Basic health check endpoint
+app.MapHealthChecks("/health");
+
 // Additional health check endpoints
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {

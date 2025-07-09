@@ -31,6 +31,8 @@ public class TokenManagerServiceTests : IDisposable
         _mockCorrelationService.Setup(x => x.GetCorrelationId()).Returns("test-correlation-id");
 
         _mockConfigurationService = new Mock<IConfiguration>();
+        _mockConfigurationService.Setup(x => x["TokenCaching:BufferMinutes"]).Returns("3");
+        _mockConfigurationService.Setup(x => x["TokenCaching:FallbackCacheMinutes"]).Returns("40");
 
         _service = new TokenManagerService(
             _mockPefindoApiService.Object,
@@ -46,7 +48,7 @@ public class TokenManagerServiceTests : IDisposable
     public async Task GetValidTokenAsync_WhenNoTokenCached_ShouldRequestNewToken()
     {
         // Arrange
-        var tokenResponse = CreateMockTokenResponse("test-token-123", "2024261509242633");
+        var tokenResponse = CreateMockTokenResponse("test-token-123", "2025191150000");
         _mockPefindoApiService.Setup(x => x.GetTokenAsync())
             .ReturnsAsync(tokenResponse);
 
@@ -54,6 +56,7 @@ public class TokenManagerServiceTests : IDisposable
         var result = await _service.GetValidTokenAsync();
 
         // Assert
+        Assert.NotNull(result);
         Assert.Equal("test-token-123", result);
         _mockPefindoApiService.Verify(x => x.GetTokenAsync(), Times.Once);
 
@@ -67,7 +70,7 @@ public class TokenManagerServiceTests : IDisposable
     public async Task GetValidTokenAsync_WhenValidTokenCached_ShouldReturnCachedToken()
     {
         // Arrange
-        var tokenResponse = CreateMockTokenResponse("cached-token-456", "2024261509242633");
+        var tokenResponse = CreateMockTokenResponse("cached-token-456", "2025191150000");
         _mockPefindoApiService.Setup(x => x.GetTokenAsync())
             .ReturnsAsync(tokenResponse);
 
@@ -86,7 +89,7 @@ public class TokenManagerServiceTests : IDisposable
     public async Task InvalidateTokenAsync_ShouldClearCachedToken()
     {
         // Arrange
-        var tokenResponse = CreateMockTokenResponse("token-to-invalidate", "2024261509242633");
+        var tokenResponse = CreateMockTokenResponse("token-to-invalidate", "2025191150000");
         _mockPefindoApiService.Setup(x => x.GetTokenAsync())
             .ReturnsAsync(tokenResponse);
 
@@ -106,8 +109,8 @@ public class TokenManagerServiceTests : IDisposable
     public async Task RefreshTokenAsync_ShouldAlwaysRequestNewToken()
     {
         // Arrange
-        var firstTokenResponse = CreateMockTokenResponse("first-token", "2024261509242633");
-        var secondTokenResponse = CreateMockTokenResponse("second-token", "2024261509242633");
+        var firstTokenResponse = CreateMockTokenResponse("first-token", "2025191150000");
+        var secondTokenResponse = CreateMockTokenResponse("second-token", "2025191150000");
 
         _mockPefindoApiService.SetupSequence(x => x.GetTokenAsync())
             .ReturnsAsync(firstTokenResponse)
@@ -137,9 +140,7 @@ public class TokenManagerServiceTests : IDisposable
     public async Task IsTokenValidAsync_WhenValidTokenCached_ShouldReturnTrue()
     {
         // Arrange
-        var futureDate = DateTime.UtcNow.AddHours(1);
-        var validDate = FormatValidDate(futureDate);
-        var tokenResponse = CreateMockTokenResponse("valid-token", validDate);
+        var tokenResponse = CreateMockTokenResponse("valid-token", "2025191150000");
 
         _mockPefindoApiService.Setup(x => x.GetTokenAsync())
             .ReturnsAsync(tokenResponse);
@@ -168,7 +169,7 @@ public class TokenManagerServiceTests : IDisposable
     public async Task GetTokenCacheInfo_WhenTokenCached_ShouldReturnCacheInfo()
     {
         // Arrange
-        var tokenResponse = CreateMockTokenResponse("info-token", "2024261509242633");
+        var tokenResponse = CreateMockTokenResponse("info-token", "2025191150000");
         _mockPefindoApiService.Setup(x => x.GetTokenAsync())
             .ReturnsAsync(tokenResponse);
 
@@ -181,7 +182,7 @@ public class TokenManagerServiceTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.Equal("info-token", result.Token);
-        Assert.Equal("2024261509242633", result.ValidDateOriginal);
+        Assert.Equal("2025191150000", result.ValidDateOriginal);
         Assert.True(result.CachedAt <= DateTime.UtcNow);
     }
 

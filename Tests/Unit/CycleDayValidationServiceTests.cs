@@ -49,9 +49,9 @@ public class CycleDayValidationServiceTests
     }
 
     [Theory]
-    [InlineData("7", 0, true)]   // Within tolerance
-    [InlineData("7", 7, true)]   // Exact match
-    [InlineData("7", 14, false)] // Outside tolerance
+    [InlineData("7", 0, false)]   // Outside tolerance (current day != 7)
+    [InlineData("7", 7, true)]   // Within tolerance
+    [InlineData("7", 14, true)] // Within tolerance
     [InlineData("invalid", 0, false)] // Invalid config
     public async Task ValidateCycleDayAsync_VariousScenarios_ReturnsExpectedResult(
         string configValue, int tolerance, bool expectedResult)

@@ -4,6 +4,7 @@ using idc.pefindo.pbk.Services.Interfaces;
 using idc.pefindo.pbk.Services.Interfaces.Logging;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text;
 using System.Text.Json;
 using Xunit;
@@ -40,6 +41,9 @@ public class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>
                 testConfig.Add("SimilarityConfig:DefaultMotherNameThreshold", "0.7");
                 testConfig.Add("CycleDayConfig:ConfigCode", "GC31");
                 testConfig.Add("CycleDayConfig:DefaultCycleDay", "7");
+
+                // Override connection strings to avoid health check issues
+                testConfig.Add("ConnectionStrings:DefaultConnection", "Host=localhost;Database=test_db;Username=test_user;Password=test_password;");
 
                 config.AddInMemoryCollection(testConfig);
             });
@@ -78,12 +82,9 @@ public class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>
                 services.AddScoped<IErrorLogger, MockErrorLogger>();
                 services.AddScoped<IAuditLogger, MockAuditLogger>();
 
-                // Remove health check that might fail in test environment
-                var healthCheckDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(DatabaseHealthCheck));
-                if (healthCheckDescriptor != null)
-                {
-                    services.Remove(healthCheckDescriptor);
-                }
+                // Remove all health check services and add a simple one that always returns healthy
+                services.RemoveAll(typeof(Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck));
+                // services.AddHealthChecks();
             });
         });
 

@@ -38,7 +38,7 @@ public class DataAggregationService : IDataAggregationService
                 
                 // Search-related data
                 SearchId = searchResponse.InquiryId.ToString(),
-                PefindoId = searchData?.IdPefindo.ToString() ?? string.Empty,
+                PefindoId = searchData?.IdPefindo.ToString() ?? "N/A",
                 
                 // Report-related data from Pefindo
                 Score = reportData?.ScoreInfo?.Score ?? "0",
@@ -51,14 +51,14 @@ public class DataAggregationService : IDataAggregationService
                 FasilitasAktif = debiturInfo?.JmlFasilitas.ToString() ?? "0",
                 
                 // Credit quality analysis
-                KualitasKreditTerburuk = AnalyzeWorstCreditQuality(reportData?.Facilities),
-                BulanKualitasTerburuk = AnalyzeWorstCreditQualityMonth(reportData?.Facilities),
-                KualitasKreditTerakhir = AnalyzeLatestCreditQuality(reportData?.Facilities),
-                BulanKualitasKreditTerakhir = AnalyzeLatestCreditQualityMonth(reportData?.Facilities),
+                KualitasKreditTerburuk = debiturInfo?.KualitasKreditTerburuk ?? "0",
+                BulanKualitasTerburuk = debiturInfo?.BulanKualitasTerburuk ?? "",
+                KualitasKreditTerakhir = debiturInfo?.KualitasKreditTerakhir ?? "0",
+                BulanKualitasKreditTerakhir = debiturInfo?.BulanKualitasKreditTerakhir ?? "",
                 
                 // Write-off analysis
-                WoContract = AnalyzeWriteOffContracts(reportData?.Facilities),
-                WoAgunan = AnalyzeWriteOffCollateral(reportData?.Collaterals),
+                WoContract = debiturInfo?.WoContract.ToString() ?? "0",
+                WoAgunan = debiturInfo?.WoAgunan.ToString() ?? "0",
                 
                 // Overdue analysis  
                 WorstOvd = CalculateWorstOverdue(reportData?.Facilities),
@@ -69,7 +69,7 @@ public class DataAggregationService : IDataAggregationService
                 // Processing status
                 Status = "SUCCESS",
                 ResponseStatus = reportResponse.Status?.ToUpper() ?? "SUCCESS",
-                ResponseMessage = reportResponse.Message ?? "Processing completed successfully",
+                ResponseMessage = searchData == null ? (searchResponse.Message ?? "Processing completed successfully") : (reportResponse.Message ?? "Processing completed successfully"),
                 Message = "Individual credit assessment completed"
             };
             

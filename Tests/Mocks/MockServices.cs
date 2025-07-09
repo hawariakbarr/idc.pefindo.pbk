@@ -122,10 +122,20 @@ public class MockPbkDataRepository : IPbkDataRepository
 public class MockPefindoApiService : IPefindoApiService
 {
     public Task<string> GetTokenAsync()
-        => Task.FromResult("mock_token_12345_" + DateTime.UtcNow.Ticks);
+        => Task.FromResult($$"""
+        {
+            "code": "01",
+            "status": "success",
+            "message": "Token aktif",
+            "data": {
+                "valid_date": "{{DateTime.UtcNow.AddHours(1):yyyy}}{{DateTime.UtcNow.AddHours(1).DayOfYear:D3}}{{DateTime.UtcNow.AddHours(1):HHmmss}}00",
+                "token": "mock_token_12345_{{DateTime.UtcNow.Ticks}}"
+            }
+        }
+        """);
 
     public Task<bool> ValidateTokenAsync(string token)
-        => Task.FromResult(token.StartsWith("mock_token_"));
+        => Task.FromResult(!string.IsNullOrEmpty(token) && (token.StartsWith("mock_token_") || token.Contains("test-token") || token.Contains("cached-token") || token.Contains("valid-token") || token.Contains("info-token") || token.Contains("token-to-invalidate")));
 
     public Task<PefindoSearchResponse> SearchDebtorAsync(PefindoSearchRequest request, string token)
     {

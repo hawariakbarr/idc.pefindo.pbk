@@ -212,7 +212,11 @@ public class TokenManagerService : ITokenManagerService
         try
         {
             // Parse the token response JSON to extract token and valid_date
-            var response = System.Text.Json.JsonSerializer.Deserialize<PefindoTokenResponse>(tokenResponse);
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var response = System.Text.Json.JsonSerializer.Deserialize<PefindoTokenResponse>(tokenResponse, jsonOptions);
 
             if (response == null)
             {
@@ -227,15 +231,8 @@ public class TokenManagerService : ITokenManagerService
             if (response.Data != null && !string.IsNullOrEmpty(response.Data.Token))
             {
                 token = response.Data.Token;
-                validDateOriginal = response.Data.ValidDate;
-                expiryDate = ParseValidDate(response.Data.ValidDate);
-            }
-            // Handle old format directly
-            else if (!string.IsNullOrEmpty(response.Data?.Token))
-            {
-                token = response.Data.Token;
-                validDateOriginal = response.Data.ValidDate;
-                expiryDate = ParseValidDate(response.Data.ValidDate);
+                validDateOriginal = response.Data.ValidDate ?? "";
+                expiryDate = ParseValidDate(response.Data.ValidDate ?? "");
             }
             else
             {
@@ -254,15 +251,23 @@ public class TokenManagerService : ITokenManagerService
         {
             _logger.LogError(ex, "Error creating token cache entry, using fallback expiry");
 
-            // Fallback: try to extract token from response and use default expiry
-            var token = ExtractTokenFromResponse(tokenResponse);
-            return new TokenCacheEntry
+            try
             {
-                Token = token,
-                ExpiryDate = DateTime.UtcNow.AddMinutes(FALLBACK_CACHE_MINUTES),
-                CachedAt = DateTime.UtcNow,
-                ValidDateOriginal = "fallback"
-            };
+                // Fallback: try to extract token from response and use default expiry
+                var token = ExtractTokenFromResponse(tokenResponse);
+                return new TokenCacheEntry
+                {
+                    Token = token,
+                    ExpiryDate = DateTime.UtcNow.AddMinutes(FALLBACK_CACHE_MINUTES),
+                    CachedAt = DateTime.UtcNow,
+                    ValidDateOriginal = "fallback"
+                };
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger.LogError(fallbackEx, "Fallback token extraction also failed");
+                throw new InvalidOperationException("Unable to extract token from response", fallbackEx);
+            }
         }
     }
 
@@ -279,15 +284,15 @@ public class TokenManagerService : ITokenManagerService
                 throw new ArgumentException("Valid date is null or empty");
             }
 
-            // Expected format: "2024261509242633"
+            // Expected format: "2024261091500" (yyyyDDDHHmmss)
             // 2024 = year
             // 261 = day of year
-            // 050924 = time (HH:mm:ss)
-            // 2633 = additional precision (possibly milliseconds)
+            // 091500 = time (HHmmss)
 
-            if (validDate.Length < 10)
+            if (validDate.Length < 13)
             {
-                throw new ArgumentException($"Valid date format is too short: {validDate}");
+                _logger.LogWarning("Valid date format is too short: {ValidDate}, using fallback expiry", validDate);
+                return DateTime.UtcNow.AddMinutes(FALLBACK_CACHE_MINUTES);
             }
 
             // Extract components
