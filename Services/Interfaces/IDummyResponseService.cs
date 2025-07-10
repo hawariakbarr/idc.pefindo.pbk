@@ -43,6 +43,11 @@ public interface IDummyResponseService
     string GetDownloadReportResponse(string scenario = "success");
 
     /// <summary>
+    /// Get dummy response for downloadPdfReport based on scenario
+    /// </summary>
+    string GetDownloadPdfReportResponse(string scenario = "success");
+
+    /// <summary>
     /// Get dummy response for downloadPdfReport
     /// </summary>
     byte[] GetPdfReportResponse(string scenario = "success");

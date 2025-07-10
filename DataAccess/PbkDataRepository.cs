@@ -32,14 +32,14 @@ public class PbkDataRepository : IPbkDataRepository
         {
             _logger.LogDebug("Storing search result for app_no: {AppNo}, inquiry_id: {InquiryId}", appNo, inquiryId);
             
-            using var connection = await _connectionFactory.CreateConnectionAsync();
+            using var connection = await _connectionFactory.CreateConnectionAsync(DatabaseKeys.Bk);
             using var command = connection.CreateCommand();
             
             var searchJson = JsonSerializer.Serialize(searchResponse, _jsonOptions);
             var similarityScore = searchResponse.Data.FirstOrDefault()?.SimilarityScore ?? 0;
             
             command.CommandText = @"
-                INSERT INTO public.pbk_search_results 
+                INSERT INTO pefindo.bk_search_results 
                 (app_no, inquiry_id, search_data, response_status, similarity_score, created_date, updated_date)
                 VALUES (@app_no, @inquiry_id, @search_data::jsonb, @response_status, @similarity_score, @created_date, @updated_date)
                 ON CONFLICT (app_no, inquiry_id) DO UPDATE SET

@@ -16,10 +16,28 @@ public interface ISimilarityValidationService
     /// <param name="nameThreshold">Name similarity threshold</param>
     /// <returns>Similarity validation result</returns>
     Task<SimilarityValidationResult> ValidateSearchSimilarityAsync(
-        IndividualRequest inputData, 
-        PefindoSearchData searchData, 
-        string appNo, 
+        IndividualRequest inputData,
+        PefindoSearchData searchData,
+        string appNo,
         double nameThreshold);
+
+    /// <summary>
+    /// Validates similarity for custom report data with additional parameters
+    /// </summary>
+    /// <param name="ktp">KTP number of the individual</param>
+    /// <param name="fullname">Full name of the individual</param>
+    /// <param name="dateOfBirth">Date of birth of the individual</param>
+    /// <param name="appNo">Application number</param>
+    /// <param name="searchData">Search data</param>
+    /// <param name="nameThreshold">Name similarity threshold</param>
+    /// <returns>Similarity validation result</returns>
+    Task<SimilarityValidationResult> ValidateSearchSimilarityAsync(
+        string ktp,
+        string fullname,
+        string dateOfBirth,
+        string appNo,
+        PefindoSearchData searchData,
+        double nameThreshold = 0.8);
     
     /// <summary>
     /// Validates similarity for custom report data
@@ -36,6 +54,29 @@ public interface ISimilarityValidationService
         string appNo, 
         double nameThreshold, 
         double motherNameThreshold);
+
+    /// <summary>
+    /// Validates similarity for custom report data
+    /// </summary>
+    /// <param name="ktp">KTP number of the individual</param>
+    /// <param name="fullname">Full name of the individual</param>
+    /// <param name="dateOfBirth">Date of birth of the individual</param>
+    /// <param name="motherName">Mother's name of the individual</param>
+    /// <param name="appNo">Application number for logging</param>
+    /// <param name="reportData">Report data from Pefindo</param>
+    /// <param name="nameThreshold">Name similarity threshold</param>
+    /// <param name="motherThreshold">Mother name similarity threshold</param>
+    /// <returns>Similarity validation result</returns>
+    Task<SimilarityValidationResult> ValidateReportSimilarityAsync(
+        string ktp,
+        string fullname,
+        string dateOfBirth,
+        string motherName,
+        string appNo,
+        PefindoReportData reportData,
+        double nameThreshold = 0.8,
+        double motherThreshold = 0.9);
+
 }
 
 /// <summary>
@@ -48,4 +89,17 @@ public class SimilarityValidationResult
     public double MotherNameSimilarity { get; set; }
     public string Status { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+}
+
+
+public class SimilarityResult
+{
+    public short ReturnData { get; set; }
+    public string Result { get; set; } = string.Empty;
+}
+
+public class SimilarityCustrptResult
+{
+    public short ReturnData { get; set; }
+    public string Result { get; set; } = string.Empty;
 }

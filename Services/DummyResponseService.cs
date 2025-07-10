@@ -142,6 +142,20 @@ public class DummyResponseService : IDummyResponseService
         return downloadResponses.GetProperty("success").GetRawText();
     }
 
+    public string GetDownloadPdfReportResponse(string scenario = "success")
+    {
+        EnsureLoaded();
+
+        var downloadResponses = _dummyResponses!.RootElement.GetProperty("downloadPdfReport");
+        if (downloadResponses.TryGetProperty(scenario, out var response))
+        {
+            return response.GetRawText();
+        }
+
+        _logger.LogWarning("DownloadPdfReport scenario '{Scenario}' not found, using default success", scenario);
+        return downloadResponses.GetProperty("success").GetRawText();
+    }
+
     public byte[] GetPdfReportResponse(string scenario = "success")
     {
         EnsureLoaded();

@@ -5,7 +5,7 @@
       "status": "success",
       "message": "Token aktif",
       "data": {
-        "valid_date": "2024261509242633",
+        "valid_date": "2027261509242633",
         "token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5SFhteUtaMVRVTmZHN2hLU2FRaU5FUUFsMUpiRlVIQXNfVHBpSTc4OHNFIiwidHlwIiA6IEpXVCJ9.eyJzdWIiOiJwYmtfdXNlciIsImF1dGhvcml0aWVzIjpbIl9fcm9vdF9fIl0sImlzcyI6InBlZmluZG8iLCJqdGkiOiI5N2QyYjE3Ny1mYjQxLTQ4MzAtOTc5YS1iZDY3M2U4Mjk3YjkiLCJleHBpcmVkX3VzZXJuYW1lIjoiUEJLU1dPUkQxMjM0IiwiaWF0IjoxNjg5NTU4MDk5fQ.K5mfUGQ"
       }
     },

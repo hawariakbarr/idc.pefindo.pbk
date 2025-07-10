@@ -81,6 +81,86 @@ public class SimilarityValidationService : ISimilarityValidationService
         }
     }
 
+    public async Task<SimilarityValidationResult> ValidateSearchSimilarityAsync(
+        string ktp,
+        string fullname,
+        string dateOfBirth,
+        string appNo,
+        PefindoSearchData searchData,
+        double nameThreshold = 0.8)
+    {
+        try
+        {
+            _logger.LogDebug("Calling chksimilarity_v4_param for app_no: {AppNo}", appNo);
+
+            using var connection = await _connectionFactory.CreateConnectionAsync(DatabaseKeys.En);
+            using var command = connection.CreateCommand();
+
+            command.CommandText = @"
+            SELECT * FROM public.chksimilarity_v4_param(
+                @p_ktp, 
+                @p_fullname, 
+                @p_dateofbirth, 
+                @p_app_no, 
+                @p_ktp_source, 
+                @p_fullname_source, 
+                @p_dateofbirth_source, 
+                @p_name_threshold
+            )";
+
+            AddParameter(command, "@p_ktp", ktp);
+            AddParameter(command, "@p_fullname", fullname);
+            AddParameter(command, "@p_dateofbirth", dateOfBirth);
+            AddParameter(command, "@p_app_no", appNo);
+            AddParameter(command, "@p_ktp_source", searchData.IdNo);
+            AddParameter(command, "@p_fullname_source", searchData.NamaDebitur);
+            AddParameter(command, "@p_dateofbirth_source", searchData.TanggalLahir);
+            AddParameter(command, "@p_name_threshold", nameThreshold);
+
+            using var reader = await command.ExecuteReaderAsync();
+
+            if (await reader.ReadAsync())
+            {
+                var tempResult = new SimilarityResult
+                {
+                    ReturnData = reader.GetInt16(reader.GetOrdinal("retrundata")),
+                    Result = reader.GetString(reader.GetOrdinal("result"))
+                };
+
+                //TODO : Implement the logic for handling different ReturnData values
+                //TODO : Adjust the logic based on the actual database function implementation
+                if (tempResult.ReturnData == 1)
+                {
+                    var result = new SimilarityValidationResult
+                    {
+                        IsMatch = true,
+                        NameSimilarity = reader.GetDecimal("name_similarity").ToDouble(),
+                        Status = reader.GetString("status"),
+                        Message = reader.GetString("message")
+                    };
+
+                    _logger.LogInformation("Search similarity validation completed for {AppNo} using {Database}. Match: {IsMatch}, Similarity: {Similarity}",
+                    appNo, DatabaseKeys.En, result.IsMatch, result.NameSimilarity);
+
+                    return result;
+                }
+                else
+                {
+                    _logger.LogWarning("chksimilarity_v4_param returned no match for app_no: {AppNo} | retrundata: {ReturnData} | result: {Result}",
+                        appNo, tempResult.ReturnData, tempResult.Result);
+                }
+            }
+
+            throw new InvalidOperationException("No result returned from chksimilarity_v4_param");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling chksimilarity_v4_param for app_no: {AppNo}", appNo);
+            throw;
+        }
+    }
+
+
     public async Task<SimilarityValidationResult> ValidateReportSimilarityAsync(
         IndividualRequest inputData, 
         PefindoDebiturInfo reportData, 
@@ -144,6 +224,96 @@ public class SimilarityValidationService : ISimilarityValidationService
             throw;
         }
     }
+
+    public async Task<SimilarityValidationResult> ValidateReportSimilarityAsync(
+        string ktp,
+        string fullname,
+        string dateOfBirth,
+        string motherName,
+        string appNo,
+        PefindoReportData reportData,
+        double nameThreshold = 0.8,
+        double motherThreshold = 0.9)
+    {
+        try
+        {
+            _logger.LogDebug("Calling chksimilarity_custrpt_v4_param for app_no: {AppNo}", appNo);
+
+            using var connection = await _connectionFactory.CreateConnectionAsync(DatabaseKeys.En);
+            using var command = connection.CreateCommand();
+
+            command.CommandText = @"
+            SELECT * FROM public.chksimilarity_custrpt_v4_param(
+                @p_ktp, 
+                @p_fullname, 
+                @p_dateofbirth, 
+                @p_mothername,
+                @p_app_no,
+                @p_ktp_source, 
+                @p_fullname_source, 
+                @p_dateofbirth_source, 
+                @p_mothername_source, 
+                @p_name_threshold, 
+                @p_mother_threshold
+            )";
+
+            AddParameter(command, "@p_ktp", ktp);
+            AddParameter(command, "@p_fullname", fullname);
+            AddParameter(command, "@p_dateofbirth", dateOfBirth);
+            AddParameter(command, "@p_mothername", motherName);
+            AddParameter(command, "@p_app_no", appNo);
+            AddParameter(command, "@p_ktp_source", reportData.Header.Ktp);
+            AddParameter(command, "@p_fullname_source", reportData.Debitur.NamaDebitur);
+            AddParameter(command, "@p_dateofbirth_source", reportData.Debitur.TanggalLahir);
+            AddParameter(command, "@p_mothername_source", reportData.Debitur.NamaGadisIbuKandung);
+            AddParameter(command, "@p_name_threshold", nameThreshold);
+            AddParameter(command, "@p_mother_threshold", motherThreshold);
+
+            using var reader = await command.ExecuteReaderAsync();
+
+            if (await reader.ReadAsync())
+            {
+                var tempResult = new SimilarityCustrptResult
+                {
+                    ReturnData = reader.GetInt16(reader.GetOrdinal("retrundata")),
+                    Result = reader.GetString(reader.GetOrdinal("result"))
+                };
+
+                //TODO : Implement the logic for handling different ReturnData values
+                //TODO : Adjust the logic based on the actual database function implementation
+
+                if (tempResult.ReturnData == 1)
+                {
+                    var result = new SimilarityValidationResult
+                    {
+                        IsMatch = reader.GetBoolean("is_match"),
+                        NameSimilarity = reader.GetDecimal("name_similarity").ToDouble(),
+                        MotherNameSimilarity = reader.GetDecimal("mother_name_similarity").ToDouble(),
+                        Status = reader.GetString("status"),
+                        Message = reader.GetString("message")
+                    };
+
+                    _logger.LogInformation("Report similarity validation completed for {AppNo}. Match: {IsMatch}, Name: {NameSim}, Mother: {MotherSim}",
+                        appNo, result.IsMatch, result.NameSimilarity, result.MotherNameSimilarity);
+
+                    return result;
+                }
+                else
+                {
+                    _logger.LogWarning("Report similarity validation returned no match for app_no: {AppNo} | retrundata: {ReturnData} | result: {Result}",
+                        appNo, tempResult.ReturnData, tempResult.Result);
+                }
+            }
+
+            throw new InvalidOperationException("No result returned from chksimilarity_custrpt_v4_param");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling chksimilarity_custrpt_v4_param for app_no: {AppNo}", appNo);
+            throw;
+        }
+    }
+
     private static void AddParameter(DbCommand command, string name, object value)
     {
         var parameter = command.CreateParameter();

@@ -97,7 +97,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             {
                 _logger.LogDebug("Step 2: Getting Pefindo API token for app_no: {AppNo}", appNo);
                 var authToken = await _tokenManagerService.GetValidTokenAsync();
-                return (new { token_obtained = true }, authToken);
+                return (new { token_obtained = true, token = authToken }, authToken);
             });
 
             // Step 3: Request SmartSearch from Pefindo PBK
@@ -125,7 +125,7 @@ public class IndividualProcessingService : IIndividualProcessingService
 
                 var response = await _pefindoApiService.SearchDebtorAsync(searchRequest, processingResults.Token);
 
-                if (response.Code != "01" || response.Status != "success")
+                if (response.Code != "01" || !response.Status.Equals("success", StringComparison.CurrentCultureIgnoreCase))
                 {
                     throw new InvalidOperationException($"Smart search failed: {response.Message}");
                 }
@@ -153,7 +153,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             });
 
             // Step 4: Validate SmartSearch Result + Run Similarity Check
-            processingResults.SelectedSearchData = await ExecuteStepWithLogging<PefindoSearchData>("SIMILARITY_CHECK_SEARCH", stepOrder++, appNo, async () =>
+            processingResults.SelectedSearchData = await ExecuteStepWithLogging<PefindoSearchData>("SMARTSEARCH_SIMILARITY_CHECK", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 4: Validating search similarity for app_no: {AppNo}", appNo);
 
@@ -161,7 +161,8 @@ public class IndividualProcessingService : IIndividualProcessingService
                 var bestMatch = processingResults.SearchResponse.Data.OrderByDescending(d => d.SimilarityScore).First();
 
                 var similarityResult = await _similarityValidationService.ValidateSearchSimilarityAsync(
-                    request, bestMatch, appNo, nameThreshold);
+                    request.IdNumber, request.Name, request.DateOfBirth,
+                    appNo, bestMatch, nameThreshold);
 
                 if (!similarityResult.IsMatch)
                 {
@@ -208,7 +209,7 @@ public class IndividualProcessingService : IIndividualProcessingService
 
                 var generateResponse = await _pefindoApiService.GenerateReportAsync(reportRequest, processingResults.Token);
 
-                if (generateResponse.Code != "01" || generateResponse.Status != "success")
+                if (generateResponse.Code != "01" || !generateResponse.Status.Equals("success", StringComparison.CurrentCultureIgnoreCase))
                 {
                     throw new InvalidOperationException($"Report generation failed: {generateResponse.Message}");
                 }
@@ -230,7 +231,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             });
 
             // Step 6: Run Report Similarity Check
-            await ExecuteStepWithLogging("SIMILARITY_CHECK_REPORT", stepOrder++, appNo, async () =>
+            await ExecuteStepWithLogging("REPORT_SIMILARITY_CHECK", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 6: Validating report similarity for app_no: {AppNo}", appNo);
 
@@ -243,7 +244,8 @@ public class IndividualProcessingService : IIndividualProcessingService
                 var motherNameThreshold = await GetMotherNameThresholdAsync();
 
                 var similarityResult = await _similarityValidationService.ValidateReportSimilarityAsync(
-                    request, processingResults.ReportResponse.Report.Debitur, appNo, nameThreshold, motherNameThreshold);
+                    request.IdNumber, request.Name, request.DateOfBirth, request.MotherName,
+                    appNo, processingResults.ReportResponse.Report, nameThreshold, motherNameThreshold);
 
                 if (!similarityResult.IsMatch)
                 {

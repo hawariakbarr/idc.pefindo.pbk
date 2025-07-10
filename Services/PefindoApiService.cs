@@ -530,8 +530,9 @@ public class PefindoApiService : IPefindoApiService
             {
                 await _dummyResponseService.LoadDummyResponsesAsync();
             }
-            
-            return _dummyResponseService.GetDownloadPdfReportResponse("success");
+            var dummyResponse = _dummyResponseService.GetDownloadPdfReportResponse("success");
+            return JsonSerializer.Deserialize<byte[]>(dummyResponse, _jsonOptions) ??
+                   throw new InvalidOperationException("Failed to deserialize dummy download pdf report response");
         }
 
         try
@@ -557,21 +558,21 @@ public class PefindoApiService : IPefindoApiService
                 pdfBytes.Length, correlationId);
             return pdfBytes;
         }
-        catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
-        {
-            return await HandleConnectionErrorWithFallbackBytes(httpEx, correlationId, "downloadPdfReport", () => 
-                _dummyResponseService?.GetDownloadPdfReportResponse("success"));
-        }
-        catch (SocketException socketEx)
-        {
-            return await HandleConnectionErrorWithFallbackBytes(socketEx, correlationId, "downloadPdfReport", () => 
-                _dummyResponseService?.GetDownloadPdfReportResponse("success"));
-        }
-        catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
-        {
-            return await HandleConnectionErrorWithFallbackBytes(timeoutEx, correlationId, "downloadPdfReport", () => 
-                _dummyResponseService?.GetDownloadPdfReportResponse("success"));
-        }
+        //catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
+        //{
+        //    return await HandleConnectionErrorWithFallbackBytes(httpEx, correlationId, "downloadPdfReport", () => 
+        //        _dummyResponseService?.GetDownloadPdfReportResponse("success"));
+        //}
+        //catch (SocketException socketEx)
+        //{
+        //    return await HandleConnectionErrorWithFallbackBytes(socketEx, correlationId, "downloadPdfReport", () => 
+        //        _dummyResponseService?.GetDownloadPdfReportResponse("success"));
+        //}
+        //catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
+        //{
+        //    return await HandleConnectionErrorWithFallbackBytes(timeoutEx, correlationId, "downloadPdfReport", () => 
+        //        _dummyResponseService?.GetDownloadPdfReportResponse("success"));
+        //}
         catch (Exception ex)
         {
             await _errorLogger.LogErrorAsync("PefindoApiService.DownloadPdf",
