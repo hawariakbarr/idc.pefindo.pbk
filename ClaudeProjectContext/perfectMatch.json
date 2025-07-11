@@ -1,0 +1,29 @@
+{
+    "code": "01",
+    "status": "Success",
+    "message": "Data ditemukan",
+    "inquiry_id": 318,
+    "data": [
+        {
+            "similarity_score": 100.00,
+            "id_pefindo": "101110967000498",
+            "id_type": "KTP",
+            "id_no": "3101110967000498",
+            "id_tipe_debitur": "PERSONAL",
+            "nama_debitur": "John Doe",
+            "tanggal_lahir": "1990-03-01",
+            "npwp": "101110967000498",
+            "tgl_pendirian": null,
+            "tempat_pendirian": null,
+            "alamat": "Jl. Sudirman No. 123, Jakarta Pusat",
+            "nama_gadis_ibu_kandung": "Maria Susanti",
+            "tempat_lahir": "Jakarta",
+            "jenis_kelamin": 1,
+            "kode_kota": "31",
+            "kode_pos": "10220",
+            "is_current": 1,
+            "response_status": "ALL_CORRECT"
+        }
+    ],
+    "response_status": "ALL_CORRECT"
+}
