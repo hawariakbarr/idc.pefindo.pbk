@@ -1,4 +1,5 @@
 using idc.pefindo.pbk.Models;
+using System.Text.Json.Nodes;
 
 namespace idc.pefindo.pbk.Services.Interfaces;
 
@@ -19,6 +20,20 @@ public interface IDataAggregationService
         IndividualRequest request,
         PefindoSearchResponse searchResponse,
         PefindoGetReportResponse reportResponse,
+        ProcessingContext processingContext);
+
+    /// <summary>
+    /// Aggregates all Pefindo data into final individual response using JsonNode for flexible object handling
+    /// </summary>
+    /// <param name="request">Original request data</param>
+    /// <param name="searchResponse">Search results from Pefindo</param>
+    /// <param name="reportResponseJson">Report data from Pefindo as JsonNode</param>
+    /// <param name="processingContext">Additional processing context</param>
+    /// <returns>Complete individual response</returns>
+    Task<IndividualData> AggregateIndividualDataWithJsonAsync(
+        IndividualRequest request,
+        PefindoSearchResponse searchResponse,
+        JsonNode? reportResponseJson,
         ProcessingContext processingContext);
 }
 

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using System.Net.Sockets;
 
@@ -62,12 +63,12 @@ public class PefindoApiService : IPefindoApiService
         if (_config.UseDummyResponses && _dummyResponseService != null)
         {
             _logger.LogInformation("Using dummy response for token request, correlation: {CorrelationId}", correlationId);
-            
+
             if (!_dummyResponseService.IsLoaded)
             {
                 await _dummyResponseService.LoadDummyResponsesAsync();
             }
-            
+
             return _dummyResponseService.GetTokenResponse("success");
         }
 
@@ -107,17 +108,17 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
         {
-            return await HandleConnectionErrorWithFallback(httpEx, correlationId, "token", () => 
+            return await HandleConnectionErrorWithFallback(httpEx, correlationId, "token", () =>
                 _dummyResponseService?.GetTokenResponse("success"));
         }
         catch (SocketException socketEx)
         {
-            return await HandleConnectionErrorWithFallback(socketEx, correlationId, "token", () => 
+            return await HandleConnectionErrorWithFallback(socketEx, correlationId, "token", () =>
                 _dummyResponseService?.GetTokenResponse("success"));
         }
         catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
         {
-            return await HandleConnectionErrorWithFallback(timeoutEx, correlationId, "token", () => 
+            return await HandleConnectionErrorWithFallback(timeoutEx, correlationId, "token", () =>
                 _dummyResponseService?.GetTokenResponse("success"));
         }
         catch (Exception ex)
@@ -135,12 +136,12 @@ public class PefindoApiService : IPefindoApiService
         if (_config.UseDummyResponses && _dummyResponseService != null)
         {
             _logger.LogInformation("Using dummy response for token validation, correlation: {CorrelationId}", correlationId);
-            
+
             if (!_dummyResponseService.IsLoaded)
             {
                 await _dummyResponseService.LoadDummyResponsesAsync();
             }
-            
+
             var dummyResponse = _dummyResponseService.GetValidateTokenResponse("success");
             return !string.IsNullOrEmpty(dummyResponse);
         }
@@ -171,17 +172,17 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
         {
-            return await HandleConnectionErrorWithFallbackBool(httpEx, correlationId, "validateToken", () => 
+            return await HandleConnectionErrorWithFallbackBool(httpEx, correlationId, "validateToken", () =>
                 !string.IsNullOrEmpty(_dummyResponseService?.GetValidateTokenResponse("success")));
         }
         catch (SocketException socketEx)
         {
-            return await HandleConnectionErrorWithFallbackBool(socketEx, correlationId, "validateToken", () => 
+            return await HandleConnectionErrorWithFallbackBool(socketEx, correlationId, "validateToken", () =>
                 !string.IsNullOrEmpty(_dummyResponseService?.GetValidateTokenResponse("success")));
         }
         catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
         {
-            return await HandleConnectionErrorWithFallbackBool(timeoutEx, correlationId, "validateToken", () => 
+            return await HandleConnectionErrorWithFallbackBool(timeoutEx, correlationId, "validateToken", () =>
                 !string.IsNullOrEmpty(_dummyResponseService?.GetValidateTokenResponse("success")));
         }
         catch (Exception ex)
@@ -199,14 +200,14 @@ public class PefindoApiService : IPefindoApiService
         if (_config.UseDummyResponses && _dummyResponseService != null)
         {
             _logger.LogInformation("Using dummy response for search request, correlation: {CorrelationId}", correlationId);
-            
+
             if (!_dummyResponseService.IsLoaded)
             {
                 await _dummyResponseService.LoadDummyResponsesAsync();
             }
-            
+
             var dummyResponse = _dummyResponseService.GetSearchResponse("perfectMatch");
-            return JsonSerializer.Deserialize<PefindoSearchResponse>(dummyResponse, _jsonOptions) ?? 
+            return JsonSerializer.Deserialize<PefindoSearchResponse>(dummyResponse, _jsonOptions) ??
                    throw new InvalidOperationException("Failed to deserialize dummy search response");
         }
 
@@ -246,7 +247,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
         {
-            return await HandleConnectionErrorWithFallbackGeneric(httpEx, correlationId, "search", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(httpEx, correlationId, "search", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetSearchResponse("perfectMatch");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoSearchResponse>(dummyResponse, _jsonOptions) : null;
@@ -254,7 +255,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (SocketException socketEx)
         {
-            return await HandleConnectionErrorWithFallbackGeneric(socketEx, correlationId, "search", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(socketEx, correlationId, "search", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetSearchResponse("perfectMatch");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoSearchResponse>(dummyResponse, _jsonOptions) : null;
@@ -262,7 +263,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
         {
-            return await HandleConnectionErrorWithFallbackGeneric(timeoutEx, correlationId, "search", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(timeoutEx, correlationId, "search", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetSearchResponse("perfectMatch");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoSearchResponse>(dummyResponse, _jsonOptions) : null;
@@ -283,14 +284,14 @@ public class PefindoApiService : IPefindoApiService
         if (_config.UseDummyResponses && _dummyResponseService != null)
         {
             _logger.LogInformation("Using dummy response for generate report request, correlation: {CorrelationId}", correlationId);
-            
+
             if (!_dummyResponseService.IsLoaded)
             {
                 await _dummyResponseService.LoadDummyResponsesAsync();
             }
-            
+
             var dummyResponse = _dummyResponseService.GetGenerateReportResponse("success");
-            return JsonSerializer.Deserialize<PefindoReportResponse>(dummyResponse, _jsonOptions) ?? 
+            return JsonSerializer.Deserialize<PefindoReportResponse>(dummyResponse, _jsonOptions) ??
                    throw new InvalidOperationException("Failed to deserialize dummy generate report response");
         }
 
@@ -327,7 +328,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
         {
-            return await HandleConnectionErrorWithFallbackGeneric(httpEx, correlationId, "generateReport", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(httpEx, correlationId, "generateReport", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetGenerateReportResponse("success");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoReportResponse>(dummyResponse, _jsonOptions) : null;
@@ -335,7 +336,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (SocketException socketEx)
         {
-            return await HandleConnectionErrorWithFallbackGeneric(socketEx, correlationId, "generateReport", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(socketEx, correlationId, "generateReport", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetGenerateReportResponse("success");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoReportResponse>(dummyResponse, _jsonOptions) : null;
@@ -343,7 +344,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
         {
-            return await HandleConnectionErrorWithFallbackGeneric(timeoutEx, correlationId, "generateReport", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(timeoutEx, correlationId, "generateReport", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetGenerateReportResponse("success");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoReportResponse>(dummyResponse, _jsonOptions) : null;
@@ -365,14 +366,14 @@ public class PefindoApiService : IPefindoApiService
         if (_config.UseDummyResponses && _dummyResponseService != null)
         {
             _logger.LogInformation("Using dummy response for get report request, correlation: {CorrelationId}", correlationId);
-            
+
             if (!_dummyResponseService.IsLoaded)
             {
                 await _dummyResponseService.LoadDummyResponsesAsync();
             }
-            
+
             var dummyResponse = _dummyResponseService.GetReportResponse("successComplete");
-            return JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) ?? 
+            return JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) ??
                    throw new InvalidOperationException("Failed to deserialize dummy get report response");
         }
 
@@ -402,7 +403,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
         {
-            return await HandleConnectionErrorWithFallbackGeneric(httpEx, correlationId, "getReport", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(httpEx, correlationId, "getReport", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetReportResponse("successComplete");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) : null;
@@ -410,7 +411,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (SocketException socketEx)
         {
-            return await HandleConnectionErrorWithFallbackGeneric(socketEx, correlationId, "getReport", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(socketEx, correlationId, "getReport", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetReportResponse("successComplete");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) : null;
@@ -418,7 +419,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
         {
-            return await HandleConnectionErrorWithFallbackGeneric(timeoutEx, correlationId, "getReport", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(timeoutEx, correlationId, "getReport", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetReportResponse("successComplete");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) : null;
@@ -440,14 +441,14 @@ public class PefindoApiService : IPefindoApiService
         if (_config.UseDummyResponses && _dummyResponseService != null)
         {
             _logger.LogInformation("Using dummy response for download report request, correlation: {CorrelationId}", correlationId);
-            
+
             if (!_dummyResponseService.IsLoaded)
             {
                 await _dummyResponseService.LoadDummyResponsesAsync();
             }
-            
+
             var dummyResponse = _dummyResponseService.GetDownloadReportResponse("success");
-            return JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) ?? 
+            return JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) ??
                    throw new InvalidOperationException("Failed to deserialize dummy download report response");
         }
 
@@ -487,7 +488,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
         {
-            return await HandleConnectionErrorWithFallbackGeneric(httpEx, correlationId, "downloadReport", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(httpEx, correlationId, "downloadReport", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetDownloadReportResponse("success");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) : null;
@@ -495,7 +496,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (SocketException socketEx)
         {
-            return await HandleConnectionErrorWithFallbackGeneric(socketEx, correlationId, "downloadReport", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(socketEx, correlationId, "downloadReport", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetDownloadReportResponse("success");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) : null;
@@ -503,7 +504,7 @@ public class PefindoApiService : IPefindoApiService
         }
         catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
         {
-            return await HandleConnectionErrorWithFallbackGeneric(timeoutEx, correlationId, "downloadReport", () => 
+            return await HandleConnectionErrorWithFallbackGeneric(timeoutEx, correlationId, "downloadReport", () =>
             {
                 var dummyResponse = _dummyResponseService?.GetDownloadReportResponse("success");
                 return dummyResponse != null ? JsonSerializer.Deserialize<PefindoGetReportResponse>(dummyResponse, _jsonOptions) : null;
@@ -525,7 +526,7 @@ public class PefindoApiService : IPefindoApiService
         if (_config.UseDummyResponses && _dummyResponseService != null)
         {
             _logger.LogInformation("Using dummy response for PDF download request, correlation: {CorrelationId}", correlationId);
-            
+
             if (!_dummyResponseService.IsLoaded)
             {
                 await _dummyResponseService.LoadDummyResponsesAsync();
@@ -560,17 +561,17 @@ public class PefindoApiService : IPefindoApiService
         }
         //catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
         //{
-        //    return await HandleConnectionErrorWithFallbackBytes(httpEx, correlationId, "downloadPdfReport", () => 
+        //    return await HandleConnectionErrorWithFallbackBytes(httpEx, correlationId, "downloadPdfReport", () =>
         //        _dummyResponseService?.GetDownloadPdfReportResponse("success"));
         //}
         //catch (SocketException socketEx)
         //{
-        //    return await HandleConnectionErrorWithFallbackBytes(socketEx, correlationId, "downloadPdfReport", () => 
+        //    return await HandleConnectionErrorWithFallbackBytes(socketEx, correlationId, "downloadPdfReport", () =>
         //        _dummyResponseService?.GetDownloadPdfReportResponse("success"));
         //}
         //catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
         //{
-        //    return await HandleConnectionErrorWithFallbackBytes(timeoutEx, correlationId, "downloadPdfReport", () => 
+        //    return await HandleConnectionErrorWithFallbackBytes(timeoutEx, correlationId, "downloadPdfReport", () =>
         //        _dummyResponseService?.GetDownloadPdfReportResponse("success"));
         //}
         catch (Exception ex)
@@ -614,14 +615,14 @@ public class PefindoApiService : IPefindoApiService
                 var dummyResponse = getDummyResponse();
                 if (!string.IsNullOrEmpty(dummyResponse))
                 {
-                    _logger.LogWarning("Using dummy response fallback for {Operation} due to connection error, correlation: {CorrelationId}", 
+                    _logger.LogWarning("Using dummy response fallback for {Operation} due to connection error, correlation: {CorrelationId}",
                         operation, correlationId);
                     return dummyResponse;
                 }
             }
             catch (Exception dummyEx)
             {
-                _logger.LogError(dummyEx, "Failed to load dummy response for {Operation} fallback, correlation: {CorrelationId}", 
+                _logger.LogError(dummyEx, "Failed to load dummy response for {Operation} fallback, correlation: {CorrelationId}",
                     operation, correlationId);
             }
         }
@@ -649,13 +650,13 @@ public class PefindoApiService : IPefindoApiService
                 }
 
                 var dummyResponse = getDummyResponse();
-                _logger.LogWarning("Using dummy response fallback for {Operation} due to connection error, correlation: {CorrelationId}", 
+                _logger.LogWarning("Using dummy response fallback for {Operation} due to connection error, correlation: {CorrelationId}",
                     operation, correlationId);
                 return dummyResponse;
             }
             catch (Exception dummyEx)
             {
-                _logger.LogError(dummyEx, "Failed to load dummy response for {Operation} fallback, correlation: {CorrelationId}", 
+                _logger.LogError(dummyEx, "Failed to load dummy response for {Operation} fallback, correlation: {CorrelationId}",
                     operation, correlationId);
             }
         }
@@ -685,14 +686,14 @@ public class PefindoApiService : IPefindoApiService
                 var dummyResponse = getDummyResponse();
                 if (dummyResponse != null)
                 {
-                    _logger.LogWarning("Using dummy response fallback for {Operation} due to connection error, correlation: {CorrelationId}", 
+                    _logger.LogWarning("Using dummy response fallback for {Operation} due to connection error, correlation: {CorrelationId}",
                         operation, correlationId);
                     return dummyResponse;
                 }
             }
             catch (Exception dummyEx)
             {
-                _logger.LogError(dummyEx, "Failed to load dummy response for {Operation} fallback, correlation: {CorrelationId}", 
+                _logger.LogError(dummyEx, "Failed to load dummy response for {Operation} fallback, correlation: {CorrelationId}",
                     operation, correlationId);
             }
         }
@@ -722,19 +723,222 @@ public class PefindoApiService : IPefindoApiService
                 var dummyResponse = getDummyResponse();
                 if (dummyResponse != null)
                 {
-                    _logger.LogWarning("Using dummy response fallback for {Operation} due to connection error, correlation: {CorrelationId}", 
+                    _logger.LogWarning("Using dummy response fallback for {Operation} due to connection error, correlation: {CorrelationId}",
                         operation, correlationId);
                     return dummyResponse;
                 }
             }
             catch (Exception dummyEx)
             {
-                _logger.LogError(dummyEx, "Failed to load dummy response for {Operation} fallback, correlation: {CorrelationId}", 
+                _logger.LogError(dummyEx, "Failed to load dummy response for {Operation} fallback, correlation: {CorrelationId}",
                     operation, correlationId);
             }
         }
 
         // If no dummy response is available, rethrow the original exception
         throw ex;
+    }
+
+    /// <summary>
+    /// Handle connection errors with fallback to dummy responses (JsonNode return)
+    /// </summary>
+    private async Task<JsonNode?> HandleConnectionErrorWithFallbackJson(Exception ex, string correlationId, string operation, Func<JsonNode?> getDummyResponse)
+    {
+        var errorMessage = $"Connection error during {operation} operation: {ex.Message}";
+        await _errorLogger.LogErrorAsync($"PefindoApiService.{operation}", errorMessage, ex, correlationId);
+
+        // Try to use dummy response as fallback
+        if (_dummyResponseService != null)
+        {
+            try
+            {
+                if (!_dummyResponseService.IsLoaded)
+                {
+                    await _dummyResponseService.LoadDummyResponsesAsync();
+                }
+
+                var dummyResponse = getDummyResponse();
+                if (dummyResponse != null)
+                {
+                    _logger.LogWarning("Using dummy response due to connection error for operation: {Operation}, correlation: {CorrelationId}",
+                        operation, correlationId);
+                    return dummyResponse;
+                }
+            }
+            catch (Exception dummyEx)
+            {
+                _logger.LogError(dummyEx, "Failed to load dummy response for operation: {Operation}, correlation: {CorrelationId}",
+                    operation, correlationId);
+            }
+        }
+
+        // If no dummy response is available, rethrow the original exception
+        throw ex;
+    }
+
+    /// <summary>
+    /// Get report response as JsonNode for flexible object handling
+    /// </summary>
+    public async Task<JsonNode?> GetReportAsJsonAsync(string eventId, string token)
+    {
+        var correlationId = _correlationService.GetCorrelationId();
+
+        // If configured to use dummy responses, use them directly
+        if (_config.UseDummyResponses && _dummyResponseService != null)
+        {
+            _logger.LogInformation("Using dummy response for get report JSON request, correlation: {CorrelationId}", correlationId);
+
+            if (!_dummyResponseService.IsLoaded)
+            {
+                await _dummyResponseService.LoadDummyResponsesAsync();
+            }
+
+            var dummyResponse = _dummyResponseService.GetReportResponse("successComplete");
+            return JsonNode.Parse(dummyResponse);
+        }
+
+        try
+        {
+            _logger.LogDebug("Retrieving report as JSON for event ID: {EventId}, correlation: {CorrelationId}", eventId, correlationId);
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/product/getReport/event_id/{eventId}");
+            request.Headers.Add("Authorization", $"Bearer {token}");
+
+            var response = await _httpClient.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = $"HTTP error {response.StatusCode}: {content}";
+                await _errorLogger.LogErrorAsync("PefindoApiService.GetReportAsJson", error, null, correlationId);
+                throw new HttpRequestException(error);
+            }
+
+            var jsonNode = JsonNode.Parse(content);
+
+            _logger.LogInformation("Report JSON retrieval completed. EventId: {EventId}, correlation: {CorrelationId}",
+                eventId, correlationId);
+
+            return jsonNode;
+        }
+        catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
+        {
+            return await HandleConnectionErrorWithFallbackJson(httpEx, correlationId, "getReportAsJson", () =>
+            {
+                var dummyResponse = _dummyResponseService?.GetReportResponse("successComplete");
+                return dummyResponse != null ? JsonNode.Parse(dummyResponse) : null;
+            });
+        }
+        catch (SocketException socketEx)
+        {
+            return await HandleConnectionErrorWithFallbackJson(socketEx, correlationId, "getReportAsJson", () =>
+            {
+                var dummyResponse = _dummyResponseService?.GetReportResponse("successComplete");
+                return dummyResponse != null ? JsonNode.Parse(dummyResponse) : null;
+            });
+        }
+        catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
+        {
+            return await HandleConnectionErrorWithFallbackJson(timeoutEx, correlationId, "getReportAsJson", () =>
+            {
+                var dummyResponse = _dummyResponseService?.GetReportResponse("successComplete");
+                return dummyResponse != null ? JsonNode.Parse(dummyResponse) : null;
+            });
+        }
+        catch (Exception ex)
+        {
+            await _errorLogger.LogErrorAsync("PefindoApiService.GetReportAsJson",
+                $"Error retrieving report JSON for event ID: {eventId}", ex, correlationId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Download report response as JsonNode for flexible object handling
+    /// </summary>
+    public async Task<JsonNode?> DownloadReportAsJsonAsync(string eventId, string token, int? page = null, int? maxRecords = null)
+    {
+        var correlationId = _correlationService.GetCorrelationId();
+
+        // If configured to use dummy responses, use them directly
+        if (_config.UseDummyResponses && _dummyResponseService != null)
+        {
+            _logger.LogInformation("Using dummy response for download report JSON request, correlation: {CorrelationId}", correlationId);
+
+            if (!_dummyResponseService.IsLoaded)
+            {
+                await _dummyResponseService.LoadDummyResponsesAsync();
+            }
+
+            var dummyResponse = _dummyResponseService.GetDownloadReportResponse("success");
+            return JsonNode.Parse(dummyResponse);
+        }
+
+        try
+        {
+            _logger.LogDebug("Downloading report as JSON for event ID: {EventId}, correlation: {CorrelationId}", eventId, correlationId);
+
+            var url = $"/api/v1/product/downloadReport/event_id/{eventId}";
+            if (page.HasValue || maxRecords.HasValue)
+            {
+                var queryParams = new List<string>();
+                if (page.HasValue)
+                    queryParams.Add($"page={page.Value}");
+                if (maxRecords.HasValue)
+                    queryParams.Add($"max_records={maxRecords.Value}");
+
+                url += "?" + string.Join("&", queryParams);
+            }
+
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("Authorization", $"Bearer {token}");
+
+            var response = await _httpClient.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = $"HTTP error {response.StatusCode}: {content}";
+                await _errorLogger.LogErrorAsync("PefindoApiService.DownloadReportAsJson", error, null, correlationId);
+                throw new HttpRequestException(error);
+            }
+
+            var jsonNode = JsonNode.Parse(content);
+
+            _logger.LogInformation("Report JSON download completed. EventId: {EventId}, correlation: {CorrelationId}",
+                eventId, correlationId);
+
+            return jsonNode;
+        }
+        catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
+        {
+            return await HandleConnectionErrorWithFallbackJson(httpEx, correlationId, "downloadReportAsJson", () =>
+            {
+                var dummyResponse = _dummyResponseService?.GetDownloadReportResponse("success");
+                return dummyResponse != null ? JsonNode.Parse(dummyResponse) : null;
+            });
+        }
+        catch (SocketException socketEx)
+        {
+            return await HandleConnectionErrorWithFallbackJson(socketEx, correlationId, "downloadReportAsJson", () =>
+            {
+                var dummyResponse = _dummyResponseService?.GetDownloadReportResponse("success");
+                return dummyResponse != null ? JsonNode.Parse(dummyResponse) : null;
+            });
+        }
+        catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
+        {
+            return await HandleConnectionErrorWithFallbackJson(timeoutEx, correlationId, "downloadReportAsJson", () =>
+            {
+                var dummyResponse = _dummyResponseService?.GetDownloadReportResponse("success");
+                return dummyResponse != null ? JsonNode.Parse(dummyResponse) : null;
+            });
+        }
+        catch (Exception ex)
+        {
+            await _errorLogger.LogErrorAsync("PefindoApiService.DownloadReportAsJson",
+                $"Error downloading report JSON for event ID: {eventId}", ex, correlationId);
+            throw;
+        }
     }
 }

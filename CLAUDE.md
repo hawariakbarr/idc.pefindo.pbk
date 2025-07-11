@@ -61,6 +61,31 @@ docker-compose -f docker-compose.dev.yml logs postgres
 - **Health Check**: `https://localhost:7142/health`
 - **pgAdmin**: `http://localhost:5050` (admin@localhost.com / admin123)
 
+### VS Code Debug Configuration
+The project includes comprehensive VS Code configuration for debugging and development:
+
+**Debug Configurations** (`.vscode/launch.json`):
+- **`.NET Core Launch (web)`**: Default configuration with both HTTP/HTTPS, auto-opens Swagger
+- **`.NET Core Launch (HTTPS)`**: HTTPS-only mode for secure development
+- **`.NET Core Launch (HTTP)`**: HTTP-only mode for basic testing
+- **`.NET Core Attach`**: Attach to running processes for debugging
+
+**Available Tasks** (`.vscode/tasks.json`):
+- `build` (Ctrl+Shift+B): Default build task
+- `watch`: Hot reload development mode
+- `test`: Run all unit tests
+- `run-dev`: Run with HTTPS profile
+- `run-http`: Run with HTTP profile
+- `docker-dev-up`: Start development database
+- `docker-dev-down`: Stop development database
+
+**Quick Start**:
+```bash
+# Start debugging: Press F5 or Run > Start Debugging
+# Build project: Ctrl+Shift+B
+# Run tasks: Ctrl+Shift+P > "Tasks: Run Task"
+```
+
 ## Architecture Overview
 
 ### Core Components
@@ -135,10 +160,12 @@ The project uses **xUnit** with **FluentAssertions** and **Moq** for testing:
 ### Key File Locations
 - **Main Controller**: `Controllers/IndividualController.cs`
 - **Core Service**: `Services/IndividualProcessingService.cs`
+- **Data Aggregation**: `Services/DataAggregationService.cs` - Recently updated for model compatibility
 - **Configuration**: `Configuration/PefindoConfig.cs`
 - **Models**: `Models/PefindoModels.cs` and `Models/RequestResponseModels.cs`
 - **Database Access**: `DataAccess/` directory
 - **Logging Services**: `Services/Logging/` directory
+- **VS Code Config**: `.vscode/` directory with launch.json, tasks.json, settings.json
 
 ### Important Constants
 - **API Route**: `/idcpefindo/individual`
@@ -160,3 +187,38 @@ All services are registered in `Program.cs` with scoped lifetime. The applicatio
 - **Async Processing**: Full async pipeline to avoid blocking
 - **Retry Logic**: Built-in retry mechanisms for external API calls
 - **Timeout Configuration**: Configurable timeouts for external service calls
+
+## Recent Updates & Compatibility Notes
+
+### DataAggregationService Model Compatibility (Latest)
+The `DataAggregationService.cs` has been updated to ensure full compatibility with the latest `PefindoModels.cs` structure:
+
+**Key Changes Made**:
+- **Property Mapping Updates**: Fixed property name mismatches (e.g., `max` → `TunggakanTerburuk`, `KualitasKredit` → `KolektabilitasTerburuk`)
+- **Data Type Handling**: Added proper string-to-numeric parsing for facility data
+- **Scoring Integration**: Enhanced score extraction from `PefindoScoring` array with fallback handling
+- **Credit Quality Analysis**: Updated credit quality mapping to handle both string and numeric kolektabilitas values
+- **Collection Name Updates**: Changed `Facilities` → `Fasilitas` throughout the service
+
+**New Helper Methods**:
+- `GetScoreFromReport()`: Extracts credit scores from scoring array or report data
+- `GetWorstCreditQualityMonth()`: Determines month of worst credit quality from facility history
+- Enhanced `MapCreditQualityToNumber()`: Handles both text and numeric quality indicators
+
+**Compatibility Notes**:
+- All facility processing methods now use string-based data fields from `PefindoFasilitas`
+- Proper null checking and default value handling for missing data
+- Backward compatibility maintained for existing API responses
+
+### Model Structure Updates
+The `PefindoModels.cs` contains comprehensive data models for:
+- **Authentication**: Token management with data object structure
+- **Search Operations**: Individual debtor search with similarity scoring
+- **Report Generation**: Complete report data including facilities, collateral, and scoring
+- **Data Aggregation**: Rich debtor information with financial metrics and credit history
+
+**Important Model Classes**:
+- `PefindoDebiturInfo`: Contains 100+ financial and credit-related properties
+- `PefindoFasilitas`: Facility details with collateral and guarantor information
+- `PefindoScoring`: Credit scoring with reason codes and risk grades
+- `PefindoGetReportResponse`: Main response wrapper with comprehensive report data
