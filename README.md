@@ -5,13 +5,16 @@ A .NET 8 Web API that serves as middleware between Core Banking Decision Engine 
 ## 🚀 Features
 
 - **Complete Credit Assessment Workflow**: 9-step process from validation to final report
+- **Dual Processing Pipeline**: Standard typed processing and flexible JSON processing methods
+- **JSON-Compatible PDF Download**: Enhanced PDF handling with Base64 encoding for JSON workflows
 - **Token Management**: Secure JWT token handling with automatic refresh and caching
 - **Multi-Database Support**: PostgreSQL connections to multiple IDC databases
 - **Comprehensive Logging**: Structured logging with application IDs and audit trails
 - **Health Monitoring**: Built-in health checks and monitoring endpoints
 - **Similarity Validation**: Configurable name and mother name similarity checking
-- **PDF Report Generation**: Automated PDF report download and storage
+- **PDF Report Generation**: Automated PDF report download and storage with dual format support
 - **Data Aggregation**: Multi-source data consolidation for final responses
+- **Dummy Response Compatibility**: Enhanced testing with automatic data format conversion
 
 ## 📋 Business Process Flow
 
@@ -49,15 +52,38 @@ The API implements a sequential 9-step workflow:
 ### Core Components
 
 - **IndividualController**: Main API endpoint for credit assessment requests
-- **IndividualProcessingService**: Orchestrates the complete workflow
-- **PefindoApiService**: Handles external Pefindo PBK API calls
+- **IndividualProcessingService**: Orchestrates the complete workflow with dual processing methods
+- **PefindoApiService**: Handles external Pefindo PBK API calls with JSON and standard PDF download support
 - **TokenManagerService**: Manages JWT tokens with caching
 - **SimilarityValidationService**: Validates name similarities
-- **DataAggregationService**: Consolidates multi-source data
+- **DataAggregationService**: Consolidates multi-source data with enhanced model compatibility
+
+### Processing Methods
+
+The API supports **two processing methods** for handling different data format requirements:
+
+#### **Standard Processing Method**: `ProcessIndividualRequestAsync`
+- **Strongly-typed models** (`PefindoGetReportResponse`)
+- **Direct byte array handling** for PDF downloads
+- **Full model validation** and type safety
+- **Optimized performance** with minimal serialization overhead
+- **Best for**: Production environments with consistent API responses
+
+#### **JSON Processing Method**: `ProcessIndividualRequestWithJsonAsync`
+- **Flexible JsonNode** for dynamic data handling
+- **JSON-compatible PDF download** with Base64 encoding
+- **Adaptable to varying** API response structures
+- **Enhanced dummy response** compatibility with automatic conversion
+- **Best for**: Development, testing, and environments with variable response formats
+
+#### **Key Differences in Step 8 (PDF Download)**:
+- **Standard**: `DownloadPdfReportAsync()` → `byte[]` → Direct file save
+- **JSON**: `DownloadPdfReportWithJsonAsync()` → `JsonNode` with Base64 → Convert to bytes → File save
 
 ### Key Design Patterns
 
 - **Service-Oriented Architecture**: Clear separation of concerns
+- **Dual Processing Pipeline**: Support for both typed and JSON-based processing
 - **Dependency Injection**: Comprehensive DI container configuration
 - **Async/Await Pattern**: Full asynchronous processing pipeline
 - **Configuration-Driven Behavior**: Runtime configuration through database
@@ -574,6 +600,42 @@ For support and questions:
 - Create an issue in the repository
 - Contact the development team
 - Review the API documentation at `/swagger`
+
+## 🔄 Recent Updates
+
+### **JSON-Compatible PDF Download Enhancement** (Latest)
+
+Enhanced the `PefindoApiService` with new JSON-compatible PDF download capabilities:
+
+#### **New Method**: `DownloadPdfReportWithJsonAsync`
+- **Return Format**: `{"binaryData": "base64_encoded_pdf_content"}`
+- **Compatibility**: Handles both dummy responses and real API responses
+- **Base64 Conversion**: Automatic conversion from raw PDF data to Base64
+- **Error Handling**: Comprehensive fallback to dummy responses
+
+#### **Integration Features**:
+- **Step 8 Enhancement**: Integrated into `ProcessIndividualRequestWithJsonAsync`
+- **Consistent Logging**: Uses `ExecuteStepWithLogging` for uniform audit trails
+- **Graceful Degradation**: Process continues even if PDF download fails
+- **Helper Method**: `ConvertDummyPdfResponseToBase64` ensures data consistency
+
+#### **Benefits**:
+- ✅ **Fixed Base64 Conversion Error**: Resolved "invalid Base-64 string" issues
+- ✅ **Enhanced Testing**: Improved dummy response compatibility
+- ✅ **Flexible Data Handling**: Support for varying response formats
+- ✅ **Maintainable Code**: Clean separation with helper methods
+
+### **Previous Enhancements**
+
+#### **DataAggregationService Model Compatibility**
+- Updated property mappings for latest `PefindoModels.cs` structure
+- Enhanced credit quality analysis and scoring integration
+- Added comprehensive null checking and default value handling
+
+#### **Comprehensive Logging System**
+- 5 specialized PostgreSQL logging tables
+- Master correlation tracking with detailed audit trails
+- Step-by-step process monitoring with performance metrics
 
 ---
 
