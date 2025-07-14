@@ -64,6 +64,14 @@ public interface IPefindoApiService
     Task<byte[]> DownloadPdfReportAsync(string eventId, string token);
 
     /// <summary>
+    /// Download PDF report as JsonNode with binary data for JSON processing
+    /// </summary>
+    /// <param name="eventId">Event ID from report generation</param>
+    /// <param name="token">Valid access token</param>
+    /// <returns>JSON object containing PDF binary data as base64 string</returns>
+    Task<JsonNode?> DownloadPdfReportWithJsonAsync(string eventId, string token);
+
+    /// <summary>
     /// Retrieve generated report data as JsonNode for flexible object handling
     /// </summary>
     /// <param name="eventId">Event ID from report generation</param>

@@ -386,126 +386,6 @@ public class IndividualProcessingService : IIndividualProcessingService
         }
     }
 
-    private async Task ExecuteStepWithLogging(string stepName, int stepOrder, string appNo, Func<Task<object>> stepAction)
-    {
-        var correlationId = _correlationService.GetCorrelationId();
-        var requestId = _correlationService.GetRequestId();
-        var stepStopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-        try
-        {
-            await _processStepLogger.LogStepStartAsync(correlationId, requestId, stepName, stepOrder);
-
-            var stepResult = await stepAction();
-
-            stepStopwatch.Stop();
-            await _processStepLogger.LogStepCompleteAsync(correlationId, requestId, stepName, stepResult, (int)stepStopwatch.ElapsedMilliseconds);
-        }
-        catch (Exception ex)
-        {
-            stepStopwatch.Stop();
-            await _processStepLogger.LogStepFailAsync(correlationId, requestId, stepName, ex, null, (int)stepStopwatch.ElapsedMilliseconds);
-            throw;
-        }
-    }
-
-    private async Task<T> ExecuteStepWithLogging<T>(string stepName, int stepOrder, string appNo, Func<Task<(object, T)>> stepAction)
-    {
-        var correlationId = _correlationService.GetCorrelationId();
-        var requestId = _correlationService.GetRequestId();
-        var stepStopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-        try
-        {
-            await _processStepLogger.LogStepStartAsync(correlationId, requestId, stepName, stepOrder);
-
-            var (stepResult, returnValue) = await stepAction();
-
-            stepStopwatch.Stop();
-            await _processStepLogger.LogStepCompleteAsync(correlationId, requestId, stepName, stepResult, (int)stepStopwatch.ElapsedMilliseconds);
-
-            return returnValue;
-        }
-        catch (Exception ex)
-        {
-            stepStopwatch.Stop();
-            await _processStepLogger.LogStepFailAsync(correlationId, requestId, stepName, ex, null, (int)stepStopwatch.ElapsedMilliseconds);
-            throw;
-        }
-    }
-
-    private async Task<PefindoGetReportResponse> WaitForReportCompletion(string eventId, string token)
-    {
-        var maxRetries = 10;
-        var retryDelay = TimeSpan.FromSeconds(3);
-
-        for (int i = 0; i < maxRetries; i++)
-        {
-            await Task.Delay(retryDelay);
-
-            var getReportResponse = await _pefindoApiService.GetReportAsync(eventId, token);
-
-            if (getReportResponse.Code == "01") // Report ready
-            {
-                return getReportResponse;
-            }
-            else if (getReportResponse.Code == "32") // Still processing
-            {
-                _logger.LogDebug("Report still processing, retry {Retry}/{MaxRetries}", i + 1, maxRetries);
-                continue;
-            }
-            else if (getReportResponse.Code == "36") // Big report
-            {
-                // Handle big report by downloading in chunks
-                return await _pefindoApiService.DownloadReportAsync(eventId, token);
-            }
-            else
-            {
-                throw new InvalidOperationException($"Report retrieval failed: {getReportResponse.Message}");
-            }
-        }
-
-        throw new TimeoutException($"Report generation timed out after {maxRetries} retries");
-    }
-
-    private async Task<JsonNode?> WaitForReportCompletionAsJson(string eventId, string token)
-    {
-        var maxRetries = 10;
-        var retryDelay = TimeSpan.FromSeconds(3);
-
-        for (int i = 0; i < maxRetries; i++)
-        {
-            await Task.Delay(retryDelay);
-
-            var getReportJsonResponse = await _pefindoApiService.GetReportAsJsonAsync(eventId, token);
-
-            // Check status dari JsonNode
-            var code = getReportJsonResponse?["code"]?.ToString();
-
-            if (code == "01") // Report ready
-            {
-                return getReportJsonResponse;
-            }
-            else if (code == "32") // Still processing
-            {
-                _logger.LogDebug("Report still processing, retry {Retry}/{MaxRetries}", i + 1, maxRetries);
-                continue;
-            }
-            else if (code == "36") // Big report
-            {
-                // Handle big report by downloading in chunks
-                return await _pefindoApiService.DownloadReportAsJsonAsync(eventId, token);
-            }
-            else
-            {
-                var message = getReportJsonResponse?["message"]?.ToString();
-                throw new InvalidOperationException($"Report retrieval failed: {message}");
-            }
-        }
-
-        throw new TimeoutException($"Report generation timed out after {maxRetries} retries");
-    }
-
     /// <summary>
     /// Alternative processing method using JsonNode for flexible object handling
     /// </summary>
@@ -725,18 +605,48 @@ public class IndividualProcessingService : IIndividualProcessingService
                 return new { report_data_stored = true };
             });
 
-            // Step 8: Download PDF Report (Optional, sama seperti method asli)
+            // Step 8: Download PDF Report (Optional, using JSON method)
             try
             {
-                if (!string.IsNullOrEmpty(processingResults.EventId))
+                processingResults.PdfPath = await ExecuteStepWithLogging<string?>("DOWNLOAD_PDF_REPORT_JSON", stepOrder++, appNo, async () =>
                 {
-                    var pdfBytes = await _pefindoApiService.DownloadPdfReportAsync(processingResults.EventId, processingResults.Token);
-                    processingResults.PdfPath = await SavePdfReportAsync(appNo, processingResults.EventId, pdfBytes);
-                }
+                    _logger.LogDebug("Step 8: Downloading PDF report as JSON for app_no: {AppNo}", appNo);
+
+                    if (string.IsNullOrEmpty(processingResults.EventId))
+                    {
+                        throw new InvalidOperationException("Event ID is required for PDF download");
+                    }
+
+                    var pdfJsonResponse = await _pefindoApiService.DownloadPdfReportWithJsonAsync(processingResults.EventId, processingResults.Token);
+                    
+                    if (pdfJsonResponse?["binaryData"] == null)
+                    {
+                        throw new InvalidOperationException("PDF binary data not found in response");
+                    }
+
+                    var base64Data = pdfJsonResponse["binaryData"]!.ToString();
+                    var pdfBytes = Convert.FromBase64String(base64Data);
+
+                    // Save PDF to file system
+                    var pdfPath = await SavePdfReportAsync(appNo, processingResults.EventId, pdfBytes);
+
+                    var logData = new
+                    {
+                        pdf_downloaded = true,
+                        pdf_size_bytes = pdfBytes.Length,
+                        pdf_path = pdfPath,
+                        method = "json"
+                    };
+
+                    return (logData, pdfPath);
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "PDF download failed for app_no: {AppNo}, continuing without PDF", appNo);
+                await _errorLogger.LogWarningAsync("IndividualProcessingService.DownloadPdfJson",
+                    $"PDF download with JSON failed for app_no: {appNo}, continuing without PDF", correlationId);
+                _logger.LogWarning(ex, "PDF download with JSON failed for app_no: {AppNo}, continuing without PDF", appNo);
+                processingResults.PdfPath = null;
             }
 
             // Step 9: Aggregate Data and Generate Final Response (menggunakan JSON method)
@@ -798,6 +708,126 @@ public class IndividualProcessingService : IIndividualProcessingService
 
             throw;
         }
+    }
+
+    private async Task ExecuteStepWithLogging(string stepName, int stepOrder, string appNo, Func<Task<object>> stepAction)
+    {
+        var correlationId = _correlationService.GetCorrelationId();
+        var requestId = _correlationService.GetRequestId();
+        var stepStopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        try
+        {
+            await _processStepLogger.LogStepStartAsync(correlationId, requestId, stepName, stepOrder);
+
+            var stepResult = await stepAction();
+
+            stepStopwatch.Stop();
+            await _processStepLogger.LogStepCompleteAsync(correlationId, requestId, stepName, stepResult, (int)stepStopwatch.ElapsedMilliseconds);
+        }
+        catch (Exception ex)
+        {
+            stepStopwatch.Stop();
+            await _processStepLogger.LogStepFailAsync(correlationId, requestId, stepName, ex, null, (int)stepStopwatch.ElapsedMilliseconds);
+            throw;
+        }
+    }
+
+    private async Task<T> ExecuteStepWithLogging<T>(string stepName, int stepOrder, string appNo, Func<Task<(object, T)>> stepAction)
+    {
+        var correlationId = _correlationService.GetCorrelationId();
+        var requestId = _correlationService.GetRequestId();
+        var stepStopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        try
+        {
+            await _processStepLogger.LogStepStartAsync(correlationId, requestId, stepName, stepOrder);
+
+            var (stepResult, returnValue) = await stepAction();
+
+            stepStopwatch.Stop();
+            await _processStepLogger.LogStepCompleteAsync(correlationId, requestId, stepName, stepResult, (int)stepStopwatch.ElapsedMilliseconds);
+
+            return returnValue;
+        }
+        catch (Exception ex)
+        {
+            stepStopwatch.Stop();
+            await _processStepLogger.LogStepFailAsync(correlationId, requestId, stepName, ex, null, (int)stepStopwatch.ElapsedMilliseconds);
+            throw;
+        }
+    }
+
+    private async Task<PefindoGetReportResponse> WaitForReportCompletion(string eventId, string token)
+    {
+        var maxRetries = 10;
+        var retryDelay = TimeSpan.FromSeconds(3);
+
+        for (int i = 0; i < maxRetries; i++)
+        {
+            await Task.Delay(retryDelay);
+
+            var getReportResponse = await _pefindoApiService.GetReportAsync(eventId, token);
+
+            if (getReportResponse.Code == "01") // Report ready
+            {
+                return getReportResponse;
+            }
+            else if (getReportResponse.Code == "32") // Still processing
+            {
+                _logger.LogDebug("Report still processing, retry {Retry}/{MaxRetries}", i + 1, maxRetries);
+                continue;
+            }
+            else if (getReportResponse.Code == "36") // Big report
+            {
+                // Handle big report by downloading in chunks
+                return await _pefindoApiService.DownloadReportAsync(eventId, token);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Report retrieval failed: {getReportResponse.Message}");
+            }
+        }
+
+        throw new TimeoutException($"Report generation timed out after {maxRetries} retries");
+    }
+
+    private async Task<JsonNode?> WaitForReportCompletionAsJson(string eventId, string token)
+    {
+        var maxRetries = 10;
+        var retryDelay = TimeSpan.FromSeconds(3);
+
+        for (int i = 0; i < maxRetries; i++)
+        {
+            await Task.Delay(retryDelay);
+
+            var getReportJsonResponse = await _pefindoApiService.GetReportAsJsonAsync(eventId, token);
+
+            // Check status dari JsonNode
+            var code = getReportJsonResponse?["code"]?.ToString();
+
+            if (code == "01") // Report ready
+            {
+                return getReportJsonResponse;
+            }
+            else if (code == "32") // Still processing
+            {
+                _logger.LogDebug("Report still processing, retry {Retry}/{MaxRetries}", i + 1, maxRetries);
+                continue;
+            }
+            else if (code == "36") // Big report
+            {
+                // Handle big report by downloading in chunks
+                return await _pefindoApiService.DownloadReportAsJsonAsync(eventId, token);
+            }
+            else
+            {
+                var message = getReportJsonResponse?["message"]?.ToString();
+                throw new InvalidOperationException($"Report retrieval failed: {message}");
+            }
+        }
+
+        throw new TimeoutException($"Report generation timed out after {maxRetries} retries");
     }
 
     private async Task<double> GetNameThresholdAsync()

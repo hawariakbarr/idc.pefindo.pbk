@@ -777,6 +777,110 @@ public class PefindoApiService : IPefindoApiService
     }
 
     /// <summary>
+    /// Helper method to convert dummy PDF response to Base64 format
+    /// </summary>
+    private JsonNode? ConvertDummyPdfResponseToBase64(string dummyResponse)
+    {
+        var dummyJson = JsonNode.Parse(dummyResponse);
+        if (dummyJson?["binaryData"] != null)
+        {
+            var rawPdfData = dummyJson["binaryData"]!.ToString();
+            var pdfBytes = System.Text.Encoding.UTF8.GetBytes(rawPdfData);
+            var base64Data = Convert.ToBase64String(pdfBytes);
+            
+            return new JsonObject
+            {
+                ["binaryData"] = base64Data
+            };
+        }
+        return dummyJson;
+    }
+
+    /// <summary>
+    /// Download PDF report as JsonNode with binary data for JSON processing
+    /// </summary>
+    public async Task<JsonNode?> DownloadPdfReportWithJsonAsync(string eventId, string token)
+    {
+        var correlationId = _correlationService.GetCorrelationId();
+
+        // If configured to use dummy responses, use them directly
+        if (_config.UseDummyResponses && _dummyResponseService != null)
+        {
+            _logger.LogInformation("Using dummy response for PDF download JSON request, correlation: {CorrelationId}", correlationId);
+
+            if (!_dummyResponseService.IsLoaded)
+            {
+                await _dummyResponseService.LoadDummyResponsesAsync();
+            }
+
+            var dummyResponse = _dummyResponseService.GetDownloadPdfReportResponse("success");
+            return ConvertDummyPdfResponseToBase64(dummyResponse);
+        }
+
+        try
+        {
+            _logger.LogInformation("Downloading PDF report as JSON for event ID: {EventId}, correlation: {CorrelationId}", eventId, correlationId);
+
+            var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/product/downloadPdfReport/event_id/{eventId}");
+            request.Headers.Add("Authorization", $"Bearer {token}");
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                var error = $"PDF download failed. Status: {response.StatusCode}, Content: {errorContent}";
+                await _errorLogger.LogErrorAsync("PefindoApiService.DownloadPdfWithJson", error, null, correlationId);
+                throw new HttpRequestException(error);
+            }
+
+            var pdfBytes = await response.Content.ReadAsByteArrayAsync();
+            var base64Data = Convert.ToBase64String(pdfBytes);
+
+            // Create JSON response structure compatible with dummy response format
+            var jsonResponse = new JsonObject
+            {
+                ["binaryData"] = base64Data
+            };
+
+            _logger.LogInformation("PDF report downloaded as JSON successfully. Size: {Size} bytes, correlation: {CorrelationId}",
+                pdfBytes.Length, correlationId);
+            
+            return jsonResponse;
+        }
+        catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))
+        {
+            return await HandleConnectionErrorWithFallbackJson(httpEx, correlationId, "downloadPdfWithJson", () =>
+            {
+                var dummyResponse = _dummyResponseService?.GetDownloadPdfReportResponse("success");
+                return dummyResponse != null ? ConvertDummyPdfResponseToBase64(dummyResponse) : null;
+            });
+        }
+        catch (SocketException socketEx)
+        {
+            return await HandleConnectionErrorWithFallbackJson(socketEx, correlationId, "downloadPdfWithJson", () =>
+            {
+                var dummyResponse = _dummyResponseService?.GetDownloadPdfReportResponse("success");
+                return dummyResponse != null ? ConvertDummyPdfResponseToBase64(dummyResponse) : null;
+            });
+        }
+        catch (TaskCanceledException timeoutEx) when (timeoutEx.InnerException is TimeoutException)
+        {
+            return await HandleConnectionErrorWithFallbackJson(timeoutEx, correlationId, "downloadPdfWithJson", () =>
+            {
+                var dummyResponse = _dummyResponseService?.GetDownloadPdfReportResponse("success");
+                return dummyResponse != null ? ConvertDummyPdfResponseToBase64(dummyResponse) : null;
+            });
+        }
+        catch (Exception ex)
+        {
+            await _errorLogger.LogErrorAsync("PefindoApiService.DownloadPdfWithJson",
+                $"Error downloading PDF report as JSON for event ID: {eventId}", ex, correlationId);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Get report response as JsonNode for flexible object handling
     /// </summary>
     public async Task<JsonNode?> GetReportAsJsonAsync(string eventId, string token)
