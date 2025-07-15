@@ -16,13 +16,16 @@ public class IndividualController : ControllerBase
 {
     private readonly IIndividualProcessingService _processingService;
     private readonly ILogger<IndividualController> _logger;
+    private readonly IValidator<IndividualRequest> _validator;
 
     public IndividualController(
         IIndividualProcessingService processingService,
-        ILogger<IndividualController> logger)
+        ILogger<IndividualController> logger,
+        IValidator<IndividualRequest> validator)
     {
         _processingService = processingService;
         _logger = logger;
+        _validator = validator;
     }
 
     /// <summary>
@@ -40,39 +43,23 @@ public class IndividualController : ControllerBase
     public async Task<ActionResult<IndividualResponse>> ProcessIndividualWithJson(
         [FromBody] IndividualRequest request)
     {
-        try
-        {
-            _logger.LogInformation("Received individual JSON request for app_no: {AppNo}", request.CfLosAppNo);
+        _logger.LogInformation("Received individual JSON request for app_no: {AppNo}", request.CfLosAppNo);
 
-            var response = await _processingService.ProcessIndividualRequestWithJsonAsync(request);
+        // Validate request
+        var validationResult = await _validator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            _logger.LogWarning("Validation failed for app_no: {AppNo}, errors: {Errors}",
+                request.CfLosAppNo,
+                string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
 
-            _logger.LogInformation("Successfully processed individual JSON request for app_no: {AppNo}", request.CfLosAppNo);
-            return Ok(response);
+            throw new ValidationException(validationResult.Errors);
         }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning(ex, "Business rule violation for individual JSON request, app_no: {AppNo}", request.CfLosAppNo);
-            return BadRequest(new ProblemDetails
-            {
-                Type = "https://httpstatuses.com/400",
-                Title = "Business Rule Violation",
-                Status = StatusCodes.Status400BadRequest,
-                Detail = ex.Message,
-                Instance = HttpContext.Request.Path
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing individual JSON request for app_no: {AppNo}", request.CfLosAppNo);
-            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
-            {
-                Type = "https://httpstatuses.com/500",
-                Title = "Internal Server Error",
-                Status = StatusCodes.Status500InternalServerError,
-                Detail = "An error occurred while processing the request",
-                Instance = HttpContext.Request.Path
-            });
-        }
+
+        var response = await _processingService.ProcessIndividualRequestWithJsonAsync(request);
+
+        _logger.LogInformation("Successfully processed individual JSON request for app_no: {AppNo}", request.CfLosAppNo);
+        return Ok(response);
     }
 
     /// <summary>

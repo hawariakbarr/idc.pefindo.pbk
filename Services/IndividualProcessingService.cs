@@ -171,9 +171,19 @@ public class IndividualProcessingService : IIndividualProcessingService
                     request.IdNumber, request.Name, request.DateOfBirth,
                     appNo, bestMatch, nameThreshold);
 
+                // Only throw exception for system errors, not business logic no-match
+                if (similarityResult.Status == "Invalid Data" || similarityResult.Status == "Unknown")
+                {
+                    _logger.LogWarning("Similarity validation failed for app_no: {AppNo}. Status: {Status}, Message: {Message}",
+                        appNo, similarityResult.Status, similarityResult.Message);
+                    throw new InvalidOperationException(similarityResult.Message);
+                }
+
                 if (!similarityResult.IsMatch)
                 {
-                    throw new InvalidOperationException($"Similarity validation failed: {similarityResult.Message}");
+                    _logger.LogWarning("Search similarity validation failed for app_no: {AppNo}. Status: {Status}, Message: {Message}",
+                        appNo, similarityResult.Status, similarityResult.Message);
+                    throw new InvalidOperationException(similarityResult.Message);
                 }
 
                 var logData = new
@@ -181,7 +191,7 @@ public class IndividualProcessingService : IIndividualProcessingService
                     selected_id = bestMatch.IdPefindo,
                     name_similarity = similarityResult.NameSimilarity,
                     mother_name_similarity = similarityResult.MotherNameSimilarity,
-                    similarity_match = true
+                    similarity_match = similarityResult.IsMatch
                 };
 
                 return (logData, bestMatch);
@@ -240,6 +250,7 @@ public class IndividualProcessingService : IIndividualProcessingService
 
                 if (processingResults.ReportResponseJson?["report"]?["debitur"] == null)
                 {
+                    _logger.LogWarning("Report data is incomplete for similarity check for app_no: {AppNo}", appNo);
                     throw new InvalidOperationException("Report data is incomplete for similarity check");
                 }
 
@@ -251,14 +262,26 @@ public class IndividualProcessingService : IIndividualProcessingService
                      request.IdNumber, request.Name, request.DateOfBirth, request.MotherName,
                      appNo, processingResults.ReportResponseJson!, nameThreshold, motherNameThreshold);
 
-                if (!similarityResult.IsMatch)
+                // Log audit for both match and no-match scenarios
+                var auditAction = similarityResult.IsMatch ? "ReportSimilarityValidationPassed" : "ReportSimilarityValidationFailed";
+                await _auditLogger.LogActionAsync(correlationId, "system", auditAction,
+                    "ReportSimilarity", appNo, null, similarityResult);
+
+                // Only throw exception for system errors, not business logic no-match
+                if (similarityResult.Status == "Invalid Data" || similarityResult.Status == "Unknown")
                 {
-                    throw new InvalidOperationException($"Report similarity check failed: {similarityResult.Message}");
+                    _logger.LogWarning("Report similarity validation failed for app_no: {AppNo}. Status: {Status}, Message: {Message}",
+                        appNo, similarityResult.Status, similarityResult.Message);
+                    throw new InvalidOperationException(similarityResult.Message);
                 }
 
-                // Audit log report similarity validation
-                await _auditLogger.LogActionAsync(correlationId, "system", "ReportSimilarityValidationPassed",
-                    "ReportSimilarity", appNo, null, similarityResult);
+                if (!similarityResult.IsMatch)
+                {
+                    _logger.LogWarning("Report similarity validation failed for app_no: {AppNo}. Status: {Status}, Message: {Message}",
+                        appNo, similarityResult.Status, similarityResult.Message);
+
+                    throw new InvalidOperationException(similarityResult.Message);
+                }
 
                 return new
                 {
