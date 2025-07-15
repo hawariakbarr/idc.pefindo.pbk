@@ -274,7 +274,7 @@ The project uses **xUnit** with **FluentAssertions** and **Moq** for testing:
 - **Core Service**: `Services/IndividualProcessingService.cs`
 - **Data Aggregation**: `Services/DataAggregationService.cs` - Recently updated for model compatibility
 - **API Service**: `Services/PefindoApiService.cs` - Enhanced with JSON PDF download support
-- **Configuration**: `Configuration/PefindoConfig.cs`
+- **Configuration**: `Configuration/PefindoAPIConfig.cs`
 - **Models**: `Models/PefindoModels.cs` and `Models/RequestResponseModels.cs`
 - **Database Access**: `DataAccess/` directory
 - **Logging Services**: `Services/Logging/` directory

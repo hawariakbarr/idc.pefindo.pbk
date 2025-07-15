@@ -133,7 +133,7 @@ The API supports **two processing methods** for handling different data format r
 The application supports multiple PostgreSQL databases with encrypted password configuration:
 
 - `idc.core` - Core banking data
-- `idc.en` - Enterprise data  
+- `idc.en` - Enterprise data
 - `idc.bk` - Banking data (primary)
 - `idc.sync` - Synchronization data
 
@@ -152,7 +152,7 @@ Update `appsettings.json` and `appsettings.Development.json` with your specific 
 
 ```json
 {
-  "PefindoConfig": {
+  "PefindoAPIConfig": {
     "BaseUrl": "https://api.pefindo.com",
     "Username": "your_username",
     "Password": "your_password",

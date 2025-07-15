@@ -32,10 +32,10 @@ public class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>
                 var testConfig = TestHelper.CreateTestDatabaseConfiguration();
 
                 // Add additional test configuration
-                testConfig.Add("PefindoConfig:BaseUrl", "https://mock-api.test.com");
-                testConfig.Add("PefindoConfig:Username", "test_user");
-                testConfig.Add("PefindoConfig:Password", "test_password");
-                testConfig.Add("PefindoConfig:Domain", "mock-api.test.com");
+                testConfig.Add("PefindoAPIConfig:BaseUrl", "https://mock-api.test.com");
+                testConfig.Add("PefindoAPIConfig:Username", "test_user");
+                testConfig.Add("PefindoAPIConfig:Password", "test_password");
+                testConfig.Add("PefindoAPIConfig:Domain", "mock-api.test.com");
                 testConfig.Add("TEST01", "1"); // Enable test mode
                 testConfig.Add("SimilarityConfig:DefaultNameThreshold", "0.8");
                 testConfig.Add("SimilarityConfig:DefaultMotherNameThreshold", "0.7");

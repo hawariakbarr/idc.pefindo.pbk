@@ -4,6 +4,7 @@ using idc.pefindo.pbk.Services.Interfaces;
 using idc.pefindo.pbk.Services.Interfaces.Logging;
 using idc.pefindo.pbk.Configuration;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Options;
 
 namespace idc.pefindo.pbk.Services;
 
@@ -20,6 +21,8 @@ public class IndividualProcessingService : IIndividualProcessingService
     private readonly IPbkDataRepository _pbkDataRepository;
     private readonly IGlobalConfigRepository _globalConfigRepository;
     private readonly ILogger<IndividualProcessingService> _logger;
+
+    private readonly GlobalConfig _globalConfig;
 
     // New logging services
     private readonly ICorrelationService _correlationService;
@@ -41,7 +44,8 @@ public class IndividualProcessingService : IIndividualProcessingService
         ICorrelationLogger correlationLogger,
         IProcessStepLogger processStepLogger,
         IErrorLogger errorLogger,
-        IAuditLogger auditLogger)
+        IAuditLogger auditLogger,
+        IOptions<GlobalConfig> globalConfigOptions)
     {
         _cycleDayValidationService = cycleDayValidationService;
         _tokenManagerService = tokenManagerService;
@@ -56,6 +60,7 @@ public class IndividualProcessingService : IIndividualProcessingService
         _processStepLogger = processStepLogger;
         _errorLogger = errorLogger;
         _auditLogger = auditLogger;
+        _globalConfig = globalConfigOptions.Value;
     }
 
     /// <summary>
@@ -527,14 +532,14 @@ public class IndividualProcessingService : IIndividualProcessingService
 
     private async Task<double> GetNameThresholdAsync()
     {
-        var config = await _globalConfigRepository.GetConfigValueAsync(GlobalConfigKeys.NameThreshold);
+        var config = await _globalConfigRepository.GetConfigValueAsync(_globalConfig.NameThreshold);
         return double.TryParse(config, out var threshold) ? threshold : 0.8;
     }
 
     private async Task<double> GetMotherNameThresholdAsync()
     {
-        var config = await _globalConfigRepository.GetConfigValueAsync(GlobalConfigKeys.MotherNameThreshold);
-        return double.TryParse(config, out var threshold) ? threshold : 0.7;
+        var config = await _globalConfigRepository.GetConfigValueAsync(_globalConfig.MotherNameThreshold);
+        return double.TryParse(config, out var threshold) ? threshold : 0.9;
     }
 
     private async Task<string> SavePdfReportAsync(string appNo, string eventId, byte[] pdfBytes)

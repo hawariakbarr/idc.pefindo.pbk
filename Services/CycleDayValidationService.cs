@@ -1,6 +1,7 @@
 using idc.pefindo.pbk.Configuration;
 using idc.pefindo.pbk.DataAccess;
 using idc.pefindo.pbk.Services.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace idc.pefindo.pbk.Services;
 
@@ -12,12 +13,16 @@ public class CycleDayValidationService : ICycleDayValidationService
     private readonly IGlobalConfigRepository _globalConfigRepository;
     private readonly ILogger<CycleDayValidationService> _logger;
 
+    private readonly GlobalConfig _globalConfig;
+
     public CycleDayValidationService(
         IGlobalConfigRepository globalConfigRepository,
-        ILogger<CycleDayValidationService> logger)
+        ILogger<CycleDayValidationService> logger,
+        IOptions<GlobalConfig> globalConfigOptions)
     {
         _globalConfigRepository = globalConfigRepository;
         _logger = logger;
+        _globalConfig = globalConfigOptions.Value;
     }
 
     public async Task<bool> ValidateCycleDayAsync(int tolerance = 0)
@@ -26,7 +31,7 @@ public class CycleDayValidationService : ICycleDayValidationService
         {
             // Retrieve cycle day configuration from database
             var cycleDayConfig = await GetCurrentCycleDayConfigAsync();
-            
+
             if (!int.TryParse(cycleDayConfig, out int configuredCycleDay))
             {
                 _logger.LogWarning("Invalid cycle day configuration: {CycleDayConfig}", cycleDayConfig);
@@ -36,7 +41,7 @@ public class CycleDayValidationService : ICycleDayValidationService
             var currentDay = DateTime.UtcNow.Day;
             var difference = Math.Abs(currentDay - configuredCycleDay);
             var isValid = difference <= tolerance;
-            
+
             _logger.LogInformation(
                 "Cycle day validation - Current: {CurrentDay}, Configured: {ConfiguredDay}, Tolerance: {Tolerance}, Valid: {IsValid}",
                 currentDay, configuredCycleDay, tolerance, isValid);
@@ -52,7 +57,7 @@ public class CycleDayValidationService : ICycleDayValidationService
 
     public async Task<string> GetCurrentCycleDayConfigAsync()
     {
-        var configValue = await _globalConfigRepository.GetConfigValueAsync(GlobalConfigKeys.CycleDay);
-        return configValue ?? "7"; // Default fallback
+        var configValue = await _globalConfigRepository.GetConfigValueAsync(_globalConfig.CycleDay);
+        return configValue ?? "30"; // Default fallback
     }
 }

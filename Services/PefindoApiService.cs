@@ -18,7 +18,7 @@ namespace idc.pefindo.pbk.Services;
 public class PefindoApiService : IPefindoApiService
 {
     private readonly HttpClient _httpClient;
-    private readonly PefindoConfig _config;
+    private readonly PefindoAPIConfig _config;
     private readonly ILogger<PefindoApiService> _logger;
     private readonly IErrorLogger _errorLogger;
     private readonly ICorrelationService _correlationService;
@@ -32,7 +32,7 @@ public class PefindoApiService : IPefindoApiService
 
     public PefindoApiService(
         HttpClient httpClient,
-        IOptions<PefindoConfig> config,
+        IOptions<PefindoAPIConfig> config,
         ILogger<PefindoApiService> logger,
         IErrorLogger errorLogger,
         ICorrelationService correlationService,
@@ -787,7 +787,7 @@ public class PefindoApiService : IPefindoApiService
             var rawPdfData = dummyJson["binaryData"]!.ToString();
             var pdfBytes = System.Text.Encoding.UTF8.GetBytes(rawPdfData);
             var base64Data = Convert.ToBase64String(pdfBytes);
-            
+
             return new JsonObject
             {
                 ["binaryData"] = base64Data
@@ -845,7 +845,7 @@ public class PefindoApiService : IPefindoApiService
 
             _logger.LogInformation("PDF report downloaded as JSON successfully. Size: {Size} bytes, correlation: {CorrelationId}",
                 pdfBytes.Length, correlationId);
-            
+
             return jsonResponse;
         }
         catch (HttpRequestException httpEx) when (IsConnectionError(httpEx))

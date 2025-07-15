@@ -45,12 +45,10 @@ builder.Services.Configure<DatabaseConfiguration>(
     builder.Configuration.GetSection("DatabaseConfiguration"));
 
 // Register configuration
-builder.Services.Configure<PefindoConfig>(
-    builder.Configuration.GetSection("PefindoConfig"));
-builder.Services.Configure<DatabaseConfig>(
-    builder.Configuration.GetSection("ConnectionStrings"));
-builder.Services.Configure<SimilarityConfig>(
-    builder.Configuration.GetSection("SimilarityConfig"));
+builder.Services.Configure<PefindoAPIConfig>(
+    builder.Configuration.GetSection("PefindoAPIConfig"));
+builder.Services.Configure<GlobalConfig>(
+    builder.Configuration.GetSection("GlobalConfig"));
 
 // Register database connection
 builder.Services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
@@ -76,7 +74,7 @@ builder.Services.AddHttpClient<IPefindoApiService, PefindoApiService>()
     .AddHttpMessageHandler<HttpLoggingHandler>()
     .ConfigureHttpClient((serviceProvider, client) =>
     {
-        var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<PefindoConfig>>().Value;
+        var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<PefindoAPIConfig>>().Value;
         client.BaseAddress = new Uri(config.BaseUrl);
         client.Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds);
     });
@@ -92,7 +90,7 @@ builder.Services.AddMemoryCache(options =>
 builder.Services.AddSingleton<IDummyResponseService>(serviceProvider =>
 {
     var logger = serviceProvider.GetRequiredService<ILogger<DummyResponseService>>();
-    var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<PefindoConfig>>().Value;
+    var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<PefindoAPIConfig>>().Value;
     return new DummyResponseService(logger, config.DummyResponseFilePath);
 });
 
@@ -239,7 +237,7 @@ app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.Health
 
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
-    Predicate = _ => false  
+    Predicate = _ => false
 });
 
 // Add a simple info endpoint

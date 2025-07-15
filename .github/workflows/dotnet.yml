@@ -48,15 +48,15 @@ jobs:
             {
                 string DecryptString(string encryptedPassword);
             }
-            
+
             public class EncryptionService : IEncryptionService
             {
                 public string DecryptString(string encryptedPassword) => "ci_stub_password";
             }
         }
         EOF
-        
-        # Create stub Helper.dll  
+
+        # Create stub Helper.dll
         cat > Helper.cs << 'EOF'
         using System;
         namespace Helper.Services
@@ -67,19 +67,19 @@ jobs:
             }
         }
         EOF
-        
+
         # Compile EncryptionApi stub
         dotnet new classlib -n EncryptionApi --force
         rm EncryptionApi/Class1.cs
         cp EncryptionApi.cs EncryptionApi/EncryptionApi.cs
         dotnet build EncryptionApi/EncryptionApi.csproj -o ./
-        
+
         # Compile Helper stub
-        dotnet new classlib -n Helper --force  
+        dotnet new classlib -n Helper --force
         rm Helper/Class1.cs
         cp Helper.cs Helper/Helper.cs
         dotnet build Helper/Helper.csproj -o ./
-        
+
         # Clean up temporary files
         rm -rf EncryptionApi Helper EncryptionApi.cs Helper.cs
 
@@ -90,7 +90,7 @@ jobs:
           "getToken": {
             "success": {
               "code": "01",
-              "status": "success", 
+              "status": "success",
               "message": "Token aktif",
               "data": {
                 "valid_date": "2025191150000",
@@ -161,7 +161,7 @@ jobs:
               "Microsoft.AspNetCore": "Warning"
             }
           },
-          "PefindoConfig": {
+          "PefindoAPIConfig": {
             "BaseUrl": "https://api.test.com",
             "Username": "ci_user",
             "Password": "ci_password",
@@ -176,7 +176,7 @@ jobs:
           "DatabaseConfiguration": {
             "Names": {
               "idccore": "test.core",
-              "idcen": "test.en", 
+              "idcen": "test.en",
               "idcbk": "test.bk",
               "idcsync": "test.sync"
             },
@@ -220,7 +220,7 @@ jobs:
         retention-days: 7
 
     - name: Upload coverage reports
-      uses: actions/upload-artifact@v4  
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: code-coverage
