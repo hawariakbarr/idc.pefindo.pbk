@@ -26,66 +26,6 @@ public class IndividualController : ControllerBase
     }
 
     /// <summary>
-    /// Processes individual credit bureau request through complete workflow
-    /// </summary>
-    /// <param name="request">Individual request data</param>
-    /// <returns>Individual credit summary response</returns>
-    /// <response code="200">Request processed successfully</response>
-    /// <response code="400">Invalid request data or business rule violation</response>
-    /// <response code="500">Internal server error</response>
-    [HttpPost("individual")]
-    [ProducesResponseType(typeof(IndividualResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<IndividualResponse>> ProcessIndividual(
-        [FromBody] IndividualRequest request)
-    {
-        try
-        {
-            _logger.LogInformation("Received individual request for app_no: {AppNo}", request.CfLosAppNo);
-
-            var response = await _processingService.ProcessIndividualRequestAsync(request);
-
-            _logger.LogInformation("Successfully processed individual request for app_no: {AppNo}", request.CfLosAppNo);
-            return Ok(response);
-        }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning(ex, "Validation error for app_no: {AppNo}", request.CfLosAppNo);
-            return BadRequest(new ProblemDetails
-            {
-                Title = "Validation Error",
-                Detail = ex.Message,
-                Status = StatusCodes.Status400BadRequest,
-                Instance = HttpContext.Request.Path
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning(ex, "Business rule violation for app_no: {AppNo}", request.CfLosAppNo);
-            return BadRequest(new ProblemDetails
-            {
-                Title = "Business Rule Violation",
-                Detail = ex.Message,
-                Status = StatusCodes.Status400BadRequest,
-                Instance = HttpContext.Request.Path
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error processing individual request for app_no: {AppNo}", request.CfLosAppNo);
-
-            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
-            {
-                Title = "Internal Server Error",
-                Detail = "An unexpected error occurred while processing the request",
-                Status = StatusCodes.Status500InternalServerError,
-                Instance = HttpContext.Request.Path
-            });
-        }
-    }
-
-    /// <summary>
     /// Processes individual credit bureau request using JSON object handling for better flexibility
     /// </summary>
     /// <param name="request">Individual request data</param>

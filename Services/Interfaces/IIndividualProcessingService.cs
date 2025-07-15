@@ -18,13 +18,6 @@ namespace idc.pefindo.pbk.Services.Interfaces;
 public interface IIndividualProcessingService
 {
     /// <summary>
-    /// Processes a complete individual credit assessment request
-    /// </summary>
-    /// <param name="request">Individual request data</param>
-    /// <returns>Processed individual response</returns>
-    Task<IndividualResponse> ProcessIndividualRequestAsync(IndividualRequest request);
-
-    /// <summary>
     /// Processes a complete individual credit assessment request using JsonNode for flexible object handling
     /// </summary>
     /// <param name="request">Individual request data</param>
