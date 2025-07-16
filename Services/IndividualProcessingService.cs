@@ -80,7 +80,13 @@ public class IndividualProcessingService : IIndividualProcessingService
         var correlationId = _correlationService.GetCorrelationId();
         var requestId = _correlationService.GetRequestId();
         var processingResults = new ProcessingResults();
-        var idType = "KTP"; // Default ID type, can be extended later
+
+        // Determine ID type based on request type
+        var idType = request.TypeData?.ToUpper() switch
+        {
+            "PERSONAL" => "KTP",
+            _ => "KTP" // Default to KTP for PERSONAL
+        };
 
         try
         {
@@ -153,7 +159,7 @@ public class IndividualProcessingService : IIndividualProcessingService
 
                 var searchRequest = new PefindoSearchRequest
                 {
-                    Type = "PERSONAL",
+                    Type = request.TypeData ?? "PERSONAL",
                     ProductId = 1,
                     InquiryReason = 1,
                     ReferenceCode = appNo,

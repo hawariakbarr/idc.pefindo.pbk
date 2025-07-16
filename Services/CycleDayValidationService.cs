@@ -35,36 +35,6 @@ public class CycleDayValidationService : ICycleDayValidationService
         _encryptionService = encryptionService;
     }
 
-    public async Task<bool> ValidateCycleDayAsync(int tolerance = 0)
-    {
-        try
-        {
-            // Retrieve cycle day configuration from database
-            var cycleDayConfig = await GetCurrentCycleDayConfigAsync();
-
-            if (!int.TryParse(cycleDayConfig, out int configuredCycleDay))
-            {
-                _logger.LogWarning("Invalid cycle day configuration: {CycleDayConfig}", cycleDayConfig);
-                return false;
-            }
-
-            var currentDay = DateTime.UtcNow.Day;
-            var difference = Math.Abs(currentDay - configuredCycleDay);
-            var isValid = difference <= tolerance;
-
-            _logger.LogInformation(
-                "Cycle day validation - Current: {CurrentDay}, Configured: {ConfiguredDay}, Tolerance: {Tolerance}, Valid: {IsValid}",
-                currentDay, configuredCycleDay, tolerance, isValid);
-
-            return isValid;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error validating cycle day");
-            return false; // Fail closed for security
-        }
-    }
-
     public async Task<bool> ValidateCycleDayWithPDPAsync(string idType, string idNo, int? tolerance = null)
     {
         try
@@ -75,40 +45,17 @@ public class CycleDayValidationService : ICycleDayValidationService
             // Use tolerance from parameter or get from config
             int cycleDayConfigValue = tolerance ?? await GetToleranceFromConfigAsync();
 
-            // Check if PDP is active
-            if (!_pdpConfig.IsActive)
-            {
-                _logger.LogInformation("PDP is not active, falling back to standard cycle day validation");
-                return await ValidateCycleDayAsync(cycleDayConfigValue);
-            }
-
-            // // Validate PDP configuration
-            // if (!_pdpConfig.IsValid())
-            // {
-            //     _logger.LogWarning("PDP configuration is invalid, falling back to standard cycle day validation");
-            //     return await ValidateCycleDayAsync(actualTolerance);
-            // }
-
-            // Get cycle day configuration
-            // var cycleDayConfig = await GetCurrentCycleDayConfigAsync();
-            // if (!int.TryParse(cycleDayConfig, out int cycleDayConfigValue))
-            // {
-            //     _logger.LogWarning("Invalid cycle day configuration: {CycleDayConfig}", cycleDayConfig);
-            //     return false;
-            // }
-
             var decryptedSymmetricKey = _encryptionService.DecryptString(_pdpConfig.SymmetricKey);
             var pbkInfo = await _pbkDataRepository.GetPbkInfoIdentityWithEncryptionAsync(idType, idNo, decryptedSymmetricKey);
             if (pbkInfo != null)
             {
                 var referenceDate = pbkInfo.PfReqDate.AddDays(cycleDayConfigValue);
-                var currentDay = DateTime.UtcNow.Day;
-                var difference = Math.Abs(currentDay - referenceDate.Day);
-                var isValid = difference <= referenceDate.Day; ;
+                var currentDate = DateTime.UtcNow;
+                var isValid = currentDate < referenceDate;
 
                 _logger.LogInformation(
-                    "PBK info cycle day validation - PfReqDate: {PfReqDate}, ReferenceDate: {ReferenceDate}, CurrentDay: {CurrentDay}, Tolerance: {Tolerance}, Valid: {IsValid}",
-                    pbkInfo.PfReqDate, referenceDate, currentDay, cycleDayConfigValue, isValid);
+                    "PBK info cycle day validation - PfReqDate: {PfReqDate}, ReferenceDate: {ReferenceDate}, CurrentDate: {CurrentDate}, Tolerance: {Tolerance}, Valid: {IsValid}",
+                    pbkInfo.PfReqDate, referenceDate, currentDate, cycleDayConfigValue, isValid);
 
                 if (isValid)
                 {
@@ -122,13 +69,12 @@ public class CycleDayValidationService : ICycleDayValidationService
             if (summaryInfo != null)
             {
                 var referenceDate = summaryInfo.IspCreatedDate.AddDays(cycleDayConfigValue);
-                var currentDay = DateTime.UtcNow.Day;
-                var difference = Math.Abs(currentDay - referenceDate.Day);
-                var isValid = difference <= referenceDate.Day;
+                var currentDate = DateTime.UtcNow;
+                var isValid = currentDate < referenceDate;
 
                 _logger.LogInformation(
-                    "Summary perorangan cycle day validation - IspCreatedDate: {IspCreatedDate}, ReferenceDate: {ReferenceDate}, CurrentDay: {CurrentDay}, Tolerance: {Tolerance}, Valid: {IsValid}",
-                    summaryInfo.IspCreatedDate, referenceDate, currentDay, cycleDayConfigValue, isValid);
+                    "Summary perorangan cycle day validation - IspCreatedDate: {IspCreatedDate}, ReferenceDate: {ReferenceDate}, CurrentDate: {CurrentDate}, Tolerance: {Tolerance}, Valid: {IsValid}",
+                    summaryInfo.IspCreatedDate, referenceDate, currentDate, cycleDayConfigValue, isValid);
 
                 if (isValid)
                 {

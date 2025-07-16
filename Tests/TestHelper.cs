@@ -11,7 +11,7 @@ public static class TestHelper
     {
         return new IndividualRequest
         {
-            TypeData = "Individual",
+            TypeData = "PERSONAL",
             Name = "John Doe", // Valid name (2+ chars, letters and space only)
             DateOfBirth = "1990-01-01", // Valid date, makes person 33-34 years old
             IdNumber = "1234567890123456", // Exactly 16 digits

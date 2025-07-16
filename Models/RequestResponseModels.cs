@@ -9,7 +9,7 @@ namespace idc.pefindo.pbk.Models;
 public class IndividualRequest
 {
     [JsonPropertyName("type_data")]
-    public string TypeData { get; set; } = "Individual";
+    public string TypeData { get; set; } = string.Empty;
 
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;

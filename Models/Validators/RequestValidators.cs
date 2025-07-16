@@ -12,9 +12,9 @@ public class IndividualRequestValidator : AbstractValidator<IndividualRequest>
     {
         RuleFor(x => x.TypeData)
             .NotEmpty().WithMessage("Type data is required")
-            .Must(x => x == "Individual" || x == "Corporate")
-            .WithMessage("Type data must be 'Individual' or 'Corporate'");
-        
+            .Must(x => x == "PERSONAL" || x == "CORPORATE")
+            .WithMessage("Type data must be 'PERSONAL' or 'CORPORATE'");
+
         // Corrected Name validation
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Name is required")
@@ -56,13 +56,13 @@ public class IndividualRequestValidator : AbstractValidator<IndividualRequest>
 
     private static bool BeValidDate(string dateString)
     {
-        return DateTime.TryParseExact(dateString, "yyyy-MM-dd", null, 
+        return DateTime.TryParseExact(dateString, "yyyy-MM-dd", null,
             System.Globalization.DateTimeStyles.None, out _);
     }
 
     private static bool BeValidAge(string dateString)
     {
-        if (!DateTime.TryParseExact(dateString, "yyyy-MM-dd", null, 
+        if (!DateTime.TryParseExact(dateString, "yyyy-MM-dd", null,
             System.Globalization.DateTimeStyles.None, out var birthDate))
             return false;
 
