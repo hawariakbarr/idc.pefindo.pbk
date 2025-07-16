@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using idc.pefindo.pbk.Models;
 
 namespace idc.pefindo.pbk.Services.Interfaces;
@@ -22,5 +23,5 @@ public interface IIndividualProcessingService
     /// </summary>
     /// <param name="request">Individual request data</param>
     /// <returns>Processed individual response</returns>
-    Task<IndividualResponse> ProcessIndividualRequestWithJsonAsync(IndividualRequest request);
+    Task<JsonNode?> ProcessIndividualRequestWithJsonAsync(IndividualRequest request);
 }

@@ -1,7 +1,8 @@
 using idc.pefindo.pbk.Models;
 using idc.pefindo.pbk.Services.Interfaces;
+using System.Text.Json;
 using System.Text.Json.Nodes;
-
+using idc.pefindo.pbk.Utilities;
 namespace idc.pefindo.pbk.Services;
 
 /// <summary>
@@ -115,18 +116,18 @@ public class DataAggregationService : IDataAggregationService
 
                 // Report-related data from Pefindo using JsonNode
                 Score = GetScoreFromJsonReport(scoringArray) ?? "0",
-                MaxOverdue = SafeGetString(debiturInfo?["tunggakan_terburuk"]) ?? "0",
-                MaxOverdueLast12Months = SafeGetString(debiturInfo?["tunggakan_terburuk_12_bln"]) ?? "0",
-                TotalFacilities = SafeGetString(debiturInfo?["jml_fasilitas"]) ?? "0",
-                Plafon = SafeGetString(debiturInfo?["jml_plafon"]) ?? "0",
-                TotalAngsuranAktif = SafeGetString(debiturInfo?["jml_aktif_fasilitas"]) ?? "0",
-                BakiDebetNonAgunan = SafeGetString(debiturInfo?["jml_saldo_terutang"]) ?? "0",
-                FasilitasAktif = SafeGetString(debiturInfo?["jml_aktif_fasilitas"]) ?? "0",
+                MaxOverdue = Helper.SafeGetString(debiturInfo?["tunggakan_terburuk"]) ?? "0",
+                MaxOverdueLast12Months = Helper.SafeGetString(debiturInfo?["tunggakan_terburuk_12_bln"]) ?? "0",
+                TotalFacilities = Helper.SafeGetString(debiturInfo?["jml_fasilitas"]) ?? "0",
+                Plafon = Helper.SafeGetString(debiturInfo?["jml_plafon"]) ?? "0",
+                TotalAngsuranAktif = Helper.SafeGetString(debiturInfo?["jml_aktif_fasilitas"]) ?? "0",
+                BakiDebetNonAgunan = Helper.SafeGetString(debiturInfo?["jml_saldo_terutang"]) ?? "0",
+                FasilitasAktif = Helper.SafeGetString(debiturInfo?["jml_aktif_fasilitas"]) ?? "0",
 
                 // Credit quality analysis using JsonNode
-                KualitasKreditTerburuk = SafeGetString(debiturInfo?["kolektabilitas_terburuk"]) ?? "0",
+                KualitasKreditTerburuk = Helper.SafeGetString(debiturInfo?["kolektabilitas_terburuk"]) ?? "0",
                 BulanKualitasTerburuk = GetWorstCreditQualityMonthFromJson(fasilitasArray),
-                KualitasKreditTerakhir = SafeGetString(debiturInfo?["kolektabilitas_terburuk"]) ?? "0",
+                KualitasKreditTerakhir = Helper.SafeGetString(debiturInfo?["kolektabilitas_terburuk"]) ?? "0",
                 BulanKualitasKreditTerakhir = DateTime.Now.ToString("yyyy-MM"),
 
                 // Write-off analysis using JsonNode
@@ -141,13 +142,91 @@ public class DataAggregationService : IDataAggregationService
 
                 // Processing status
                 Status = "SUCCESS",
-                ResponseStatus = SafeGetString(reportResponseJson?["status"])?.ToUpper() ?? "SUCCESS",
-                ResponseMessage = SafeGetString(reportResponseJson?["message"]) ?? "Processing completed successfully",
+                ResponseStatus = Helper.SafeGetString(reportResponseJson?["status"])?.ToUpper() ?? "SUCCESS",
+                ResponseMessage = Helper.SafeGetString(reportResponseJson?["message"]) ?? "Processing completed successfully",
                 Message = "Individual credit assessment completed"
             };
 
             _logger.LogInformation("Data aggregation with JSON completed for app_no: {AppNo}", request.CfLosAppNo);
             return await Task.FromResult(individualData);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error aggregating individual data with JSON for app_no: {AppNo}", request.CfLosAppNo);
+            throw;
+        }
+    }
+
+    public async Task<JsonNode?> AggregateIndividualWithReturnJsonAsync(
+        IndividualRequest request,
+        PefindoSearchResponse searchResponse,
+        JsonNode? reportResponseJson,
+        ProcessingContext processingContext)
+    {
+        try
+        {
+            _logger.LogDebug("Aggregating individual data with JSON for app_no: {AppNo}", request.CfLosAppNo);
+
+            var searchData = searchResponse.Data.FirstOrDefault();
+
+            // Extract data menggunakan JsonNode
+            var reportData = reportResponseJson?["report"];
+            var debiturInfo = reportData?["debitur"];
+            var fasilitasArray = reportData?["fasilitas"]?.AsArray();
+            var scoringArray = reportResponseJson?["scoring"]?.AsArray();
+
+            // Map data to individual response format
+            var individualData = new IndividualData
+            {
+                AppNo = request.CfLosAppNo,
+                IdNumber = request.IdNumber,
+                CreatedDate = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+
+                // Search-related data
+                SearchId = searchResponse.InquiryId.ToString(),
+                PefindoId = searchData?.IdPefindo.ToString() ?? "N/A",
+
+                // Report-related data from Pefindo using JsonNode
+                Score = GetScoreFromJsonReport(scoringArray) ?? "0",
+                MaxOverdue = Helper.SafeGetString(debiturInfo?["tunggakan_terburuk"]) ?? "0",
+                MaxOverdueLast12Months = Helper.SafeGetString(debiturInfo?["tunggakan_terburuk_12_bln"]) ?? "0",
+                TotalFacilities = Helper.SafeGetString(debiturInfo?["jml_fasilitas"]) ?? "0",
+                Plafon = Helper.SafeGetString(debiturInfo?["jml_plafon"]) ?? "0",
+                TotalAngsuranAktif = Helper.SafeGetString(debiturInfo?["jml_aktif_fasilitas"]) ?? "0",
+                BakiDebetNonAgunan = Helper.SafeGetString(debiturInfo?["jml_saldo_terutang"]) ?? "0",
+                FasilitasAktif = Helper.SafeGetString(debiturInfo?["jml_aktif_fasilitas"]) ?? "0",
+
+                // Credit quality analysis using JsonNode
+                KualitasKreditTerburuk = Helper.SafeGetString(debiturInfo?["kolektabilitas_terburuk"]) ?? "0",
+                BulanKualitasTerburuk = GetWorstCreditQualityMonthFromJson(fasilitasArray),
+                KualitasKreditTerakhir = Helper.SafeGetString(debiturInfo?["kolektabilitas_terakhir"]) ?? "0",
+                BulanKualitasKreditTerakhir = DateTime.Now.ToString("yyyy-MM"),
+
+                // Write-off analysis using JsonNode
+                WoContract = AnalyzeWriteOffContractsFromJson(fasilitasArray),
+                WoAgunan = AnalyzeWriteOffCollateralFromJson(fasilitasArray),
+
+                // Overdue analysis using JsonNode
+                WorstOvd = CalculateWorstOverdueFromJson(fasilitasArray),
+                TotBakidebet3160dpd = CalculateOutstandingInDpdRangeFromJson(fasilitasArray, 31, 60),
+                NoKol1Active = CountActiveKol1FacilitiesFromJson(fasilitasArray),
+                Nom0312mthAll = CalculateNominal0312MonthsFromJson(fasilitasArray),
+
+                // Processing status
+                Status = "SUCCESS",
+                ResponseStatus = Helper.SafeGetString(reportResponseJson?["status"])?.ToUpper() ?? "SUCCESS",
+                ResponseMessage = Helper.SafeGetString(reportResponseJson?["message"]) ?? "Processing completed successfully",
+                Message = "Individual credit assessment completed"
+            };
+
+            _logger.LogInformation("Data aggregation with JSON completed for app_no: {AppNo}", request.CfLosAppNo);
+
+            var result = JsonSerializer.SerializeToNode(individualData, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            });
+            return await Task.FromResult(result);
         }
         catch (Exception ex)
         {
@@ -177,10 +256,10 @@ public class DataAggregationService : IDataAggregationService
         // Get latest scoring by period
         var latestScoring = scoringArray
             .Where(s => s?["period"] != null)
-            .OrderByDescending(s => SafeGetString(s?["period"]))
+            .OrderByDescending(s => Helper.SafeGetString(s?["period"]))
             .FirstOrDefault();
 
-        return SafeGetString(latestScoring?["score"]) ?? "0";
+        return Helper.SafeGetString(latestScoring?["score"]) ?? "0";
     }
 
     private string AnalyzeWriteOffContractsFromJson(JsonArray? fasilitasArray)
@@ -188,7 +267,7 @@ public class DataAggregationService : IDataAggregationService
         if (fasilitasArray == null)
             return "0";
 
-        var writeOffCount = fasilitasArray.Count(f => SafeGetInt(f?["kolektabilitas_terburuk"]) == 5);
+        var writeOffCount = fasilitasArray.Count(f => Helper.SafeGetInt(f?["kolektabilitas_terburuk"]) == 5);
         return writeOffCount.ToString();
     }
 
@@ -198,7 +277,7 @@ public class DataAggregationService : IDataAggregationService
             return "0";
 
         var writeOffCollateralCount = fasilitasArray.Count(f =>
-            SafeGetBool(f?["has_collateral"]) && SafeGetInt(f?["kolektabilitas_terburuk"]) == 5);
+            Helper.SafeGetBool(f?["has_collateral"]) && Helper.SafeGetInt(f?["kolektabilitas_terburuk"]) == 5);
 
         return writeOffCollateralCount.ToString();
     }
@@ -348,12 +427,12 @@ public class DataAggregationService : IDataAggregationService
 
         var worstFacility = fasilitasArray
             .Where(f => f?["kolektabilitas_terburuk"] != null)
-            .OrderByDescending(f => SafeGetInt(f?["kolektabilitas_terburuk"]))
+            .OrderByDescending(f => Helper.SafeGetInt(f?["kolektabilitas_terburuk"]))
             .FirstOrDefault();
 
         if (worstFacility != null)
         {
-            var tahunBulanData = SafeGetString(worstFacility?["tahun_bulan_data"]);
+            var tahunBulanData = Helper.SafeGetString(worstFacility?["tahun_bulan_data"]);
             if (!string.IsNullOrEmpty(tahunBulanData) && DateTime.TryParse(tahunBulanData, out var date))
             {
                 return date.ToString("yyyy-MM");
@@ -369,7 +448,7 @@ public class DataAggregationService : IDataAggregationService
             return "0";
 
         var worstDpd = fasilitasArray
-            .Select(f => SafeGetInt(f?["tunggakan_terburuk"]))
+            .Select(f => Helper.SafeGetInt(f?["tunggakan_terburuk"]))
             .DefaultIfEmpty(0)
             .Max();
 
@@ -384,10 +463,10 @@ public class DataAggregationService : IDataAggregationService
         var totalOutstanding = fasilitasArray
             .Where(f =>
             {
-                var dpd = SafeGetInt(f?["tunggakan_terburuk"]);
+                var dpd = Helper.SafeGetInt(f?["tunggakan_terburuk"]);
                 return dpd >= minDpd && dpd <= maxDpd;
             })
-            .Sum(f => SafeGetDecimal(f?["saldo_terutang"]));
+            .Sum(f => Helper.SafeGetDecimal(f?["saldo_terutang"]));
 
         return totalOutstanding.ToString();
     }
@@ -397,7 +476,7 @@ public class DataAggregationService : IDataAggregationService
         if (fasilitasArray == null)
             return "0";
 
-        var kol1Count = fasilitasArray.Count(f => SafeGetInt(f?["kolektabilitas_terburuk"]) == 1);
+        var kol1Count = fasilitasArray.Count(f => Helper.SafeGetInt(f?["kolektabilitas_terburuk"]) == 1);
         return kol1Count.ToString();
     }
 
@@ -405,41 +484,5 @@ public class DataAggregationService : IDataAggregationService
     {
         // Implement based on business logic requirements
         return "0";
-    }
-
-    // Helper methods untuk safe conversion dari JsonNode
-    private string? SafeGetString(JsonNode? node)
-    {
-        return node?.ToString();
-    }
-
-    private int SafeGetInt(JsonNode? node)
-    {
-        if (node == null) return 0;
-
-        if (int.TryParse(node.ToString(), out var result))
-            return result;
-
-        return 0;
-    }
-
-    private decimal SafeGetDecimal(JsonNode? node)
-    {
-        if (node == null) return 0;
-
-        if (decimal.TryParse(node.ToString(), out var result))
-            return result;
-
-        return 0;
-    }
-
-    private bool SafeGetBool(JsonNode? node)
-    {
-        if (node == null) return false;
-
-        if (bool.TryParse(node.ToString(), out var result))
-            return result;
-
-        return false;
     }
 }

@@ -49,6 +49,8 @@ builder.Services.Configure<PefindoAPIConfig>(
     builder.Configuration.GetSection("PefindoAPIConfig"));
 builder.Services.Configure<GlobalConfig>(
     builder.Configuration.GetSection("GlobalConfig"));
+builder.Services.Configure<PDPConfig>(
+    builder.Configuration.GetSection("PDPConfig"));
 
 // Register database connection
 builder.Services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();

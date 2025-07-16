@@ -35,6 +35,19 @@ public interface IDataAggregationService
         PefindoSearchResponse searchResponse,
         JsonNode? reportResponseJson,
         ProcessingContext processingContext);
+
+    /// <summary>
+    ///  Aggregates all Pefindo data into final individual response with return type as JsonNode
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="searchResponse"></param>
+    /// <param name="reportResponseJson"></param>
+    /// <param name="processingContext"></param>
+    /// <returns></returns>
+    Task<JsonNode?> AggregateIndividualWithReturnJsonAsync(
+        IndividualRequest request, PefindoSearchResponse searchResponse,
+        JsonNode? reportResponseJson,
+        ProcessingContext processingContext);
 }
 
 /// <summary>

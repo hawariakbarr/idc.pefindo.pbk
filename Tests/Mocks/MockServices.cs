@@ -124,12 +124,12 @@ public class MockPefindoApiService : IPefindoApiService
     private readonly Dictionary<string, string> _eventIdToInquiryId = new();
     private readonly Dictionary<string, DateTime> _eventIdToCreatedTime = new();
     private readonly Dictionary<string, bool> _eventIdToReportReady = new();
-    
+
     public Task<string> GetTokenAsync()
     {
         // Simulate different scenarios based on current time for testing
         var now = DateTime.UtcNow;
-        
+
         // Simulate token generation success (most common case)
         if (now.Millisecond % 100 < 85) // 85% success rate
         {
@@ -145,7 +145,7 @@ public class MockPefindoApiService : IPefindoApiService
             }
             """);
         }
-        
+
         // Simulate authentication failure (10% chance)
         if (now.Millisecond % 100 < 95)
         {
@@ -157,7 +157,7 @@ public class MockPefindoApiService : IPefindoApiService
             }
             """);
         }
-        
+
         // Simulate IP access denied (5% chance)
         return Task.FromResult("""
         {
@@ -173,16 +173,16 @@ public class MockPefindoApiService : IPefindoApiService
         // Simulate token validation
         if (string.IsNullOrEmpty(token))
             return Task.FromResult(false);
-            
+
         // Valid tokens: mock tokens, test tokens, and specific test patterns
-        var isValid = token.StartsWith("mock_token_") || 
+        var isValid = token.StartsWith("mock_token_") ||
                      token.StartsWith("eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5SFh") ||
-                     token.Contains("test-token") || 
-                     token.Contains("cached-token") || 
-                     token.Contains("valid-token") || 
-                     token.Contains("info-token") || 
+                     token.Contains("test-token") ||
+                     token.Contains("cached-token") ||
+                     token.Contains("valid-token") ||
+                     token.Contains("info-token") ||
                      token.Contains("token-to-invalidate");
-                     
+
         return Task.FromResult(isValid);
     }
 
@@ -198,7 +198,7 @@ public class MockPefindoApiService : IPefindoApiService
                 Message = "Invalid Token"
             });
         }
-        
+
         // Simulate various search scenarios based on test data
         var firstParam = request.Params.FirstOrDefault();
         if (firstParam == null)
@@ -210,7 +210,7 @@ public class MockPefindoApiService : IPefindoApiService
                 Message = "Parameter wajib diisi"
             });
         }
-        
+
         // Test case 1: Perfect match scenario (KTP: 1234567890123456)
         if (firstParam.IdNo == "1234567890123456")
         {
@@ -238,9 +238,9 @@ public class MockPefindoApiService : IPefindoApiService
                 }
             });
         }
-        
+
         // Test case 2: Multiple matches with different similarity scores
-        if (firstParam.IdNo == "3101110967000498")
+        if (firstParam.IdNo == "3150972902880002")
         {
             return Task.FromResult(new PefindoSearchResponse
             {
@@ -255,7 +255,7 @@ public class MockPefindoApiService : IPefindoApiService
                         IdPefindo = 101110967000498,
                         SimilarityScore = 100.0m,
                         NamaDebitur = "INDIVIDU 101110967000498",
-                        IdNo = "3101110967000498",
+                        IdNo = "3150972902880002",
                         IdType = "KTP",
                         TanggalLahir = "1967-09-11",
                         Npwp = "101110967000498",
@@ -279,7 +279,7 @@ public class MockPefindoApiService : IPefindoApiService
                 }
             });
         }
-        
+
         // Test case 3: Low similarity match
         if (firstParam.IdNo == "9999999999999999")
         {
@@ -307,7 +307,7 @@ public class MockPefindoApiService : IPefindoApiService
                 }
             });
         }
-        
+
         // Test case 4: Corporate search (NPWP)
         if (firstParam.IdType == "NPWP" && firstParam.IdNo == "555666777888999")
         {
@@ -335,7 +335,7 @@ public class MockPefindoApiService : IPefindoApiService
                 }
             });
         }
-        
+
         // Default case: Data not found
         return Task.FromResult(new PefindoSearchResponse
         {
@@ -357,7 +357,7 @@ public class MockPefindoApiService : IPefindoApiService
                 Message = "Invalid Token"
             });
         }
-        
+
         // Check if event_id already exists
         if (_eventIdToInquiryId.ContainsKey(request.EventId))
         {
@@ -369,15 +369,15 @@ public class MockPefindoApiService : IPefindoApiService
                 Message = "event_id sudah ada, gunakan yang lain"
             });
         }
-        
+
         // Store event_id mapping
         _eventIdToInquiryId[request.EventId] = request.InquiryId.ToString();
         _eventIdToCreatedTime[request.EventId] = DateTime.UtcNow;
         _eventIdToReportReady[request.EventId] = false;
-        
+
         // Mark report as ready after a short delay (simulate async processing)
         Task.Delay(100).ContinueWith(_ => _eventIdToReportReady[request.EventId] = true);
-        
+
         return Task.FromResult(new PefindoReportResponse
         {
             Code = "01",
@@ -399,7 +399,7 @@ public class MockPefindoApiService : IPefindoApiService
                 Message = "Invalid Token"
             });
         }
-        
+
         // Check if event_id exists
         if (!_eventIdToInquiryId.ContainsKey(eventId))
         {
@@ -410,7 +410,7 @@ public class MockPefindoApiService : IPefindoApiService
                 Message = "Request id tidak ditemukan"
             });
         }
-        
+
         // Check if report is still processing
         if (!_eventIdToReportReady.GetValueOrDefault(eventId, false))
         {
@@ -422,7 +422,7 @@ public class MockPefindoApiService : IPefindoApiService
                 Message = "Laporan masih dalam proses scoring"
             });
         }
-        
+
         // Simulate big report scenario (5% chance)
         if (eventId.Contains("big-report") || DateTime.UtcNow.Millisecond % 100 < 5)
         {
@@ -434,7 +434,7 @@ public class MockPefindoApiService : IPefindoApiService
                 Message = "Kategori big report, gunakan method downloadReport"
             });
         }
-        
+
         // Return complete report with comprehensive data
         return Task.FromResult(new PefindoGetReportResponse
         {
@@ -516,13 +516,13 @@ public class MockPefindoApiService : IPefindoApiService
     {
         // This is for big reports - return the same structure but with pagination info
         var response = GetReportAsync(eventId, token).Result;
-        
+
         if (response.Code == "01")
         {
             // Add pagination metadata to message
             response.Message = $"Laporan berhasil dibuat (Page: {page ?? 1}, MaxRecords: {maxRecords ?? 100})";
         }
-        
+
         return Task.FromResult(response);
     }
 
@@ -533,13 +533,13 @@ public class MockPefindoApiService : IPefindoApiService
         {
             return Task.FromResult(Encoding.UTF8.GetBytes("Invalid Token"));
         }
-        
+
         // Check if event_id exists
         if (!_eventIdToInquiryId.ContainsKey(eventId))
         {
             return Task.FromResult(Encoding.UTF8.GetBytes("Request id tidak ditemukan"));
         }
-        
+
         // Generate mock PDF content
         var pdfContent = $@"%PDF-1.4
 1 0 obj
@@ -567,17 +567,17 @@ endobj
 
 xref
 0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000206 00000 n 
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000206 00000 n
 trailer
 << /Size 5 /Root 1 0 R >>
 startxref
 294
 %%EOF";
-        
+
         return Task.FromResult(Encoding.UTF8.GetBytes(pdfContent));
     }
 }

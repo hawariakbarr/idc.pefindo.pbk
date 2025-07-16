@@ -5,6 +5,7 @@ using idc.pefindo.pbk.Services.Interfaces.Logging;
 using idc.pefindo.pbk.Configuration;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
+using EncryptionApi.Services;
 
 namespace idc.pefindo.pbk.Services;
 
@@ -21,8 +22,9 @@ public class IndividualProcessingService : IIndividualProcessingService
     private readonly IPbkDataRepository _pbkDataRepository;
     private readonly IGlobalConfigRepository _globalConfigRepository;
     private readonly ILogger<IndividualProcessingService> _logger;
-
+    private readonly IEncryptionService _encryptionService;
     private readonly GlobalConfig _globalConfig;
+    private readonly PDPConfig _pdpConfig;
 
     // New logging services
     private readonly ICorrelationService _correlationService;
@@ -45,7 +47,9 @@ public class IndividualProcessingService : IIndividualProcessingService
         IProcessStepLogger processStepLogger,
         IErrorLogger errorLogger,
         IAuditLogger auditLogger,
-        IOptions<GlobalConfig> globalConfigOptions)
+        IOptions<GlobalConfig> globalConfigOptions,
+        IEncryptionService encryptionService,
+        IOptions<PDPConfig> pdpConfigOptions)
     {
         _cycleDayValidationService = cycleDayValidationService;
         _tokenManagerService = tokenManagerService;
@@ -61,12 +65,14 @@ public class IndividualProcessingService : IIndividualProcessingService
         _errorLogger = errorLogger;
         _auditLogger = auditLogger;
         _globalConfig = globalConfigOptions.Value;
+        _encryptionService = encryptionService;
+        _pdpConfig = pdpConfigOptions.Value;
     }
 
     /// <summary>
     /// Alternative processing method using JsonNode for flexible object handling
     /// </summary>
-    public async Task<IndividualResponse> ProcessIndividualRequestWithJsonAsync(IndividualRequest request)
+    public async Task<JsonNode?> ProcessIndividualRequestWithJsonAsync(IndividualRequest request)
     {
         var globalStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var processingStartTime = DateTime.UtcNow;
@@ -74,6 +80,7 @@ public class IndividualProcessingService : IIndividualProcessingService
         var correlationId = _correlationService.GetCorrelationId();
         var requestId = _correlationService.GetRequestId();
         var processingResults = new ProcessingResults();
+        var idType = "KTP"; // Default ID type, can be extended later
 
         try
         {
@@ -89,17 +96,46 @@ public class IndividualProcessingService : IIndividualProcessingService
 
             var stepOrder = 1;
 
-            // Step 1: Cycle Day Validation (sama seperti method asli)
-            await ExecuteStepWithLogging("CYCLE_DAY_VALIDATION", stepOrder++, appNo, async () =>
+            // Step 1: Cycle Day Validation with PDP Security
+            var cycleDayValid = await ExecuteStepWithLogging<bool>("CYCLE_DAY_VALIDATION", stepOrder++, appNo, async () =>
             {
-                _logger.LogDebug("Step 1: Validating cycle day for app_no: {AppNo}", appNo);
-                var isValid = await _cycleDayValidationService.ValidateCycleDayAsync(request.Tolerance);
-                if (!isValid)
-                {
-                    throw new InvalidOperationException("Request rejected due to cycle day validation failure");
-                }
-                return new { cycle_day_valid = true, tolerance = request.Tolerance };
+                _logger.LogDebug("Step 1: Validating cycle day with PDP for app_no: {AppNo}", appNo);
+                var isValid = await _cycleDayValidationService.ValidateCycleDayWithPDPAsync(idType.ToLower(), request.IdNumber, request.Tolerance);
+
+                var logData = new { cycle_day_valid = isValid, tolerance = request.Tolerance, validation_method = "PDP" };
+                return (logData, isValid);
             });
+
+            // If cycle day validation fails, try to get existing data
+            if (!cycleDayValid)
+            {
+                _logger.LogWarning("PDP cycle day validation failed for app_no: {AppNo}, attempting to retrieve existing data", appNo);
+
+                var decryptedSymmetricKey = _encryptionService.DecryptString(_pdpConfig.SymmetricKey);
+                var existingData = await _pbkDataRepository.DuplicateAndGetSummaryData(appNo, idType, decryptedSymmetricKey);
+
+                if (existingData != null)
+                {
+                    _logger.LogInformation("Found existing summary data for app_no: {AppNo}, returning cached data", appNo);
+
+                    // Log process completion
+                    await _correlationLogger.LogProcessCompleteAsync(correlationId, "Success - Cached Data");
+                    await _auditLogger.LogActionAsync(correlationId, "system", "PBKProcessingJsonCompletedFromCache",
+                        "IndividualResponse", appNo, null, new { status = "success", data_source = "cache" });
+
+                    _logger.LogInformation("Individual processing with JSON completed from cache for app_no: {AppNo} in {ElapsedMs}ms, correlation: {CorrelationId}",
+                        appNo, globalStopwatch.ElapsedMilliseconds, correlationId);
+
+                    return new JsonObject
+                    {
+                        ["status"] = "success",
+                        ["data_source"] = "cache",
+                        ["data"] = existingData
+                    };
+                }
+
+                throw new InvalidOperationException("Request rejected due to cycle day validation failure and no existing data found");
+            }
 
             // Step 2: Get Pefindo Token (sama seperti method asli)
             processingResults.Token = await ExecuteStepWithLogging<string>("GET_PEFINDO_TOKEN", stepOrder++, appNo, async () =>
@@ -125,7 +161,7 @@ public class IndividualProcessingService : IIndividualProcessingService
                     {
                         new()
                         {
-                            IdType = "KTP",
+                            IdType = idType,
                             IdNo = request.IdNumber,
                             Name = request.Name,
                             DateOfBirth = request.DateOfBirth
@@ -358,6 +394,22 @@ public class IndividualProcessingService : IIndividualProcessingService
             {
                 _logger.LogDebug("Step 9: Aggregating data using JSON for app_no: {AppNo}", appNo);
 
+                // Get summary data from database
+                JsonNode? summaryData = null;
+                try
+                {
+                    var decryptedSymmetricKey = _encryptionService.DecryptString(_pdpConfig.SymmetricKey);
+                    summaryData = await _pbkDataRepository.DuplicateAndGetSummaryData(appNo, request.IdNumber, decryptedSymmetricKey);
+                    if (summaryData != null)
+                    {
+                        _logger.LogDebug("Retrieved summary data from database for app_no: {AppNo}", appNo);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to retrieve summary data for app_no: {AppNo}, continuing with report data only", appNo);
+                }
+
                 var processingContext = new ProcessingContext
                 {
                     EventId = processingResults.EventId,
@@ -365,12 +417,16 @@ public class IndividualProcessingService : IIndividualProcessingService
                     ProcessingStartTime = processingStartTime
                 };
 
-                var individualData = await _dataAggregationService.AggregateIndividualDataWithJsonAsync(
+                // var individualData = await _dataAggregationService.AggregateIndividualDataWithJsonAsync(
+                //     request, processingResults.SearchResponse, processingResults.ReportResponseJson, processingContext);
+
+                var individualData = await _dataAggregationService.AggregateIndividualWithReturnJsonAsync(
                     request, processingResults.SearchResponse, processingResults.ReportResponseJson, processingContext);
 
                 var logData = new
                 {
                     aggregation_completed = true,
+                    summary_data_available = summaryData != null,
                     total_processing_time_ms = globalStopwatch.ElapsedMilliseconds,
                     individual_data = individualData
                 };
@@ -387,13 +443,23 @@ public class IndividualProcessingService : IIndividualProcessingService
 
             // Step 10: Store final summary data
             _logger.LogDebug("Step 10: Storing final summary data for app_no: {AppNo}", appNo);
-            await _pbkDataRepository.StoreSummaryDataAsync(
+
+            // await _pbkDataRepository.StoreSummaryDataAsync(
+            // appNo, individualData, processingResults.SelectedSearchData.IdPefindo.ToString(),
+            // processingResults.SearchResponse.InquiryId.ToString(), processingResults.EventId);
+
+            await _pbkDataRepository.StoreSummaryDataWithJsonAsync(
             appNo, individualData, processingResults.SelectedSearchData.IdPefindo.ToString(),
             processingResults.SearchResponse.InquiryId.ToString(), processingResults.EventId);
 
             globalStopwatch.Stop();
 
-            var response = new IndividualResponse { Data = individualData };
+
+            var response = new JsonObject
+            {
+                ["status"] = "success",
+                ["data"] = individualData
+            };
 
             // Log process completion to master correlation log
             await _correlationLogger.LogProcessCompleteAsync(correlationId, "Success");
