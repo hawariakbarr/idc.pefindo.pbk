@@ -51,6 +51,8 @@ public class CycleDayValidationService : ICycleDayValidationService
             {
                 var referenceDate = pbkInfo.PfReqDate.AddDays(cycleDayConfigValue);
                 var currentDate = DateTime.UtcNow;
+                // Check if current date is within the cycle day period (before reference date)
+                // If true, use cached data; if false, fetch fresh data from Pefindo PBK API
                 var isValid = currentDate < referenceDate;
 
                 _logger.LogInformation(
@@ -70,6 +72,8 @@ public class CycleDayValidationService : ICycleDayValidationService
             {
                 var referenceDate = summaryInfo.IspCreatedDate.AddDays(cycleDayConfigValue);
                 var currentDate = DateTime.UtcNow;
+                // Check if current date is within the cycle day period (before reference date)
+                // If true, use cached data; if false, fetch fresh data from Pefindo PBK API
                 var isValid = currentDate < referenceDate;
 
                 _logger.LogInformation(

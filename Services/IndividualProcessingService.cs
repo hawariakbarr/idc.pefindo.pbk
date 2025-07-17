@@ -112,20 +112,20 @@ public class IndividualProcessingService : IIndividualProcessingService
                 return (logData, isValid);
             });
 
-            // If cycle day validation fails, try to get existing data
-            if (!cycleDayValid)
+            // If cycle day validation true, try to get existing data
+            if (cycleDayValid)
             {
                 _logger.LogWarning("PDP cycle day validation failed for app_no: {AppNo}, attempting to retrieve existing data", appNo);
 
                 var decryptedSymmetricKey = _encryptionService.DecryptString(_pdpConfig.SymmetricKey);
-                var existingData = await _pbkDataRepository.DuplicateAndGetSummaryData(appNo, idType, decryptedSymmetricKey);
+                var existingData = await _pbkDataRepository.DuplicateAndGetSummaryData(appNo, request.IdNumber, decryptedSymmetricKey);
 
                 if (existingData != null)
                 {
                     _logger.LogInformation("Found existing summary data for app_no: {AppNo}, returning cached data", appNo);
 
                     // Log process completion
-                    await _correlationLogger.LogProcessCompleteAsync(correlationId, "Success - Cached Data");
+                    await _correlationLogger.LogProcessCompleteAsync(correlationId, "Success - Cycle Day  Get Data");
                     await _auditLogger.LogActionAsync(correlationId, "system", "PBKProcessingJsonCompletedFromCache",
                         "IndividualResponse", appNo, null, new { status = "success", data_source = "cache" });
 
@@ -135,8 +135,11 @@ public class IndividualProcessingService : IIndividualProcessingService
                     return new JsonObject
                     {
                         ["status"] = "success",
-                        ["data_source"] = "cache",
-                        ["data"] = existingData
+                        ["data_source"] = "cycle_day_cache",
+                        ["app_no"] = appNo,
+                        ["data"] = existingData,
+                        ["processing_time_ms"] = globalStopwatch.ElapsedMilliseconds,
+                        ["timestamp"] = DateTime.UtcNow
                     };
                 }
 
