@@ -73,6 +73,9 @@ public class ProcessStepLogEntry
     public string RequestId { get; set; } = string.Empty;
 
     [Required]
+    public string AppNo { get; set; } = string.Empty;
+
+    [Required]
     public string StepName { get; set; } = string.Empty;
 
     public int StepOrder { get; set; }

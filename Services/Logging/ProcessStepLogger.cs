@@ -23,12 +23,13 @@ public class ProcessStepLogger : IProcessStepLogger
         _logger = logger;
     }
 
-    public async Task LogStepStartAsync(string correlationId, string requestId, string stepName, int stepOrder, object? inputData = null)
+    public async Task LogStepStartAsync(string correlationId, string requestId, string appNo, string stepName, int stepOrder, object? inputData = null)
     {
         var entry = new ProcessStepLogEntry
         {
             CorrelationId = correlationId,
             RequestId = requestId,
+            AppNo = appNo,
             StepName = stepName,
             StepOrder = stepOrder,
             Status = "Started",
@@ -64,9 +65,10 @@ public class ProcessStepLogger : IProcessStepLogger
         {
             using var connection = await _connectionFactory.CreateConnectionAsync(DatabaseKeys.Bk);
             using var command = connection.CreateCommand();
-
             command.CommandText = @"
-                SELECT * FROM pefindo.bk_process_step_logs
+                SELECT id, correlation_id, request_id, cf_los_app_no, step_name, step_order, status,
+                       input_data, output_data, error_details, duration_ms, start_time, end_time, created_at
+                FROM pefindo.bk_process_step_logs
                 WHERE correlation_id = @correlation_id
                 ORDER BY step_order, start_time";
 
@@ -110,14 +112,15 @@ public class ProcessStepLogger : IProcessStepLogger
 
             command.CommandText = @"
                 INSERT INTO pefindo.bk_process_step_logs
-                (correlation_id, request_id, step_name, step_order, status, input_data, output_data, 
+                (correlation_id, request_id, cf_los_app_no, step_name, step_order, status, input_data, output_data,
                  error_details, duration_ms, start_time, end_time, created_at)
-                VALUES (@correlation_id, @request_id, @step_name, @step_order, @status, @input_data, 
+                VALUES (@correlation_id, @request_id, @cf_los_app_no, @step_name, @step_order, @status, @input_data,
                         @output_data, @error_details, @duration_ms, @start_time, @end_time, @created_at)
                 RETURNING id";
 
             AddParameter(command, "@correlation_id", entry.CorrelationId);
             AddParameter(command, "@request_id", entry.RequestId);
+            AddParameter(command, "@cf_los_app_no", entry.AppNo);
             AddParameter(command, "@step_name", entry.StepName);
             AddParameter(command, "@step_order", entry.StepOrder);
             AddParameter(command, "@status", entry.Status);
@@ -155,8 +158,8 @@ public class ProcessStepLogger : IProcessStepLogger
                     error_details = @error_details,
                     duration_ms = @duration_ms,
                     end_time = @end_time
-                WHERE correlation_id = @correlation_id 
-                  AND step_name = @step_name 
+                WHERE correlation_id = @correlation_id
+                  AND step_name = @step_name
                   AND status = 'Started'";
 
             AddParameter(command, "@status", status);

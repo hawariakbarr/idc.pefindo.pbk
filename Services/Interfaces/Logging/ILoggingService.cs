@@ -10,7 +10,7 @@ public interface IHttpRequestLogger
 
 public interface IProcessStepLogger
 {
-    Task LogStepStartAsync(string correlationId, string requestId, string stepName, int stepOrder, object? inputData = null);
+    Task LogStepStartAsync(string correlationId, string requestId, string appNo, string stepName, int stepOrder, object? inputData = null);
     Task LogStepCompleteAsync(string correlationId, string requestId, string stepName, object? outputData = null, int? durationMs = null);
     Task LogStepFailAsync(string correlationId, string requestId, string stepName, Exception ex, object? inputData = null, int? durationMs = null);
     Task<List<ProcessStepLogEntry>> GetProcessLogsByCorrelationIdAsync(string correlationId);

@@ -103,7 +103,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             var stepOrder = 1;
 
             // Step 1: Cycle Day Validation with PDP Security
-            var cycleDayValid = await ExecuteStepWithLogging<bool>("CYCLE_DAY_VALIDATION", stepOrder++, appNo, async () =>
+            var cycleDayValid = await ExecuteStepWithLogging<bool>(request, "CYCLE_DAY_VALIDATION", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 1: Validating cycle day with PDP for app_no: {AppNo}", appNo);
                 var isValid = await _cycleDayValidationService.ValidateCycleDayWithPDPAsync(idType.ToLower(), request.IdNumber, request.Tolerance);
@@ -147,7 +147,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             }
 
             // Step 2: Get Pefindo Token (sama seperti method asli)
-            processingResults.Token = await ExecuteStepWithLogging<string>("GET_PEFINDO_TOKEN", stepOrder++, appNo, async () =>
+            processingResults.Token = await ExecuteStepWithLogging<string>(request, "GET_PEFINDO_TOKEN", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 2: Getting Pefindo API token for app_no: {AppNo}", appNo);
                 var token = await _tokenManagerService.GetValidTokenAsync();
@@ -156,7 +156,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             });
 
             // Step 3: Request SmartSearch from Pefindo PBK (sama seperti method asli)
-            processingResults.SearchResponse = await ExecuteStepWithLogging<PefindoSearchResponse>("SMART_SEARCH", stepOrder++, appNo, async () =>
+            processingResults.SearchResponse = await ExecuteStepWithLogging<PefindoSearchResponse>(request, "SMART_SEARCH", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 3: Performing smart search for app_no: {AppNo}", appNo);
 
@@ -203,7 +203,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             });
 
             // Step 4: Validate SmartSearch Result + Run Similarity Check (sama seperti method asli)
-            processingResults.SelectedSearchData = await ExecuteStepWithLogging<PefindoSearchData>("SMARTSEARCH_SIMILARITY_CHECK", stepOrder++, appNo, async () =>
+            processingResults.SelectedSearchData = await ExecuteStepWithLogging<PefindoSearchData>(request, "SMARTSEARCH_SIMILARITY_CHECK", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 4: Validating search results and running similarity check for app_no: {AppNo}", appNo);
 
@@ -244,7 +244,7 @@ public class IndividualProcessingService : IIndividualProcessingService
 
             // Step 5: Request Custom Report from Pefindo PBK (menggunakan JSON)
             processingResults.EventId = Guid.NewGuid().ToString();
-            processingResults.ReportResponseJson = await ExecuteStepWithLogging<JsonNode?>("GENERATE_REPORT_JSON", stepOrder++, appNo, async () =>
+            processingResults.ReportResponseJson = await ExecuteStepWithLogging<JsonNode?>(request, "GENERATE_REPORT_JSON", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 5: Generating custom report as JSON for app_no: {AppNo}, event_id: {EventId}", appNo, processingResults.EventId);
 
@@ -273,7 +273,7 @@ public class IndividualProcessingService : IIndividualProcessingService
                 }
 
                 // Wait for report and get as JsonNode
-                var reportJsonResponse = await WaitForReportCompletionAsJson(processingResults.EventId, processingResults.Token);
+                var reportJsonResponse = await WaitForReportCompletion(processingResults.EventId, processingResults.Token);
 
                 // Audit log report generation
                 await _auditLogger.LogActionAsync(correlationId, "system", "CreditReportGenerated",
@@ -289,7 +289,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             });
 
             // Step 6: Run Report Similarity Check
-            await ExecuteStepWithLogging("REPORT_SIMILARITY_CHECK", stepOrder++, appNo, async () =>
+            await ExecuteStepWithLogging(request, "REPORT_SIMILARITY_CHECK", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 6: Validating report similarity for app_no: {AppNo}", appNo);
 
@@ -341,7 +341,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             // Step 7: Download PDF Report (Optional, using JSON method)
             try
             {
-                processingResults.PdfPath = await ExecuteStepWithLogging<string?>("DOWNLOAD_PDF_REPORT_JSON", stepOrder++, appNo, async () =>
+                processingResults.PdfPath = await ExecuteStepWithLogging<string?>(request, "DOWNLOAD_PDF_REPORT_JSON", stepOrder++, appNo, async () =>
                 {
                     _logger.LogDebug("Step 7: Downloading PDF report as JSON for app_no: {AppNo}", appNo);
 
@@ -384,7 +384,7 @@ public class IndividualProcessingService : IIndividualProcessingService
 
 
             // Step 8: Store Report Data (menggunakan data JSON)
-            await ExecuteStepWithLogging("STORE_REPORT_DATA_JSON", stepOrder++, appNo, async () =>
+            await ExecuteStepWithLogging(request, "STORE_REPORT_DATA_JSON", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 8: Storing report data as JSON for app_no: {AppNo}", appNo);
 
@@ -399,7 +399,7 @@ public class IndividualProcessingService : IIndividualProcessingService
             });
 
             // Step 9: Aggregate Data and Generate Final Response (menggunakan JSON method)
-            var individualData = await ExecuteStepWithLogging("DATA_AGGREGATION_JSON", stepOrder++, appNo, async () =>
+            var individualData = await ExecuteStepWithLogging(request, "DATA_AGGREGATION_JSON", stepOrder++, appNo, async () =>
             {
                 _logger.LogDebug("Step 9: Aggregating data using JSON for app_no: {AppNo}", appNo);
 
@@ -508,7 +508,7 @@ public class IndividualProcessingService : IIndividualProcessingService
         }
     }
 
-    private async Task ExecuteStepWithLogging(string stepName, int stepOrder, string appNo, Func<Task<object>> stepAction)
+    private async Task ExecuteStepWithLogging(IndividualRequest request, string stepName, int stepOrder, string appNo, Func<Task<object>> stepAction)
     {
         var correlationId = _correlationService.GetCorrelationId();
         var requestId = _correlationService.GetRequestId();
@@ -516,7 +516,7 @@ public class IndividualProcessingService : IIndividualProcessingService
 
         try
         {
-            await _processStepLogger.LogStepStartAsync(correlationId, requestId, stepName, stepOrder);
+            await _processStepLogger.LogStepStartAsync(correlationId, requestId, appNo, stepName, stepOrder, request);
 
             var stepResult = await stepAction();
 
@@ -526,12 +526,12 @@ public class IndividualProcessingService : IIndividualProcessingService
         catch (Exception ex)
         {
             stepStopwatch.Stop();
-            await _processStepLogger.LogStepFailAsync(correlationId, requestId, stepName, ex, null, (int)stepStopwatch.ElapsedMilliseconds);
+            await _processStepLogger.LogStepFailAsync(correlationId, requestId, stepName, ex, request, (int)stepStopwatch.ElapsedMilliseconds);
             throw;
         }
     }
 
-    private async Task<T> ExecuteStepWithLogging<T>(string stepName, int stepOrder, string appNo, Func<Task<(object, T)>> stepAction)
+    private async Task<T> ExecuteStepWithLogging<T>(IndividualRequest request, string stepName, int stepOrder, string appNo, Func<Task<(object, T)>> stepAction)
     {
         var correlationId = _correlationService.GetCorrelationId();
         var requestId = _correlationService.GetRequestId();
@@ -539,7 +539,7 @@ public class IndividualProcessingService : IIndividualProcessingService
 
         try
         {
-            await _processStepLogger.LogStepStartAsync(correlationId, requestId, stepName, stepOrder);
+            await _processStepLogger.LogStepStartAsync(correlationId, requestId, appNo, stepName, stepOrder, request);
 
             var (stepResult, returnValue) = await stepAction();
 
@@ -551,46 +551,12 @@ public class IndividualProcessingService : IIndividualProcessingService
         catch (Exception ex)
         {
             stepStopwatch.Stop();
-            await _processStepLogger.LogStepFailAsync(correlationId, requestId, stepName, ex, null, (int)stepStopwatch.ElapsedMilliseconds);
+            await _processStepLogger.LogStepFailAsync(correlationId, requestId, stepName, ex, request, (int)stepStopwatch.ElapsedMilliseconds);
             throw;
         }
     }
 
-    private async Task<PefindoGetReportResponse> WaitForReportCompletion(string eventId, string token)
-    {
-        var maxRetries = 10;
-        var retryDelay = TimeSpan.FromSeconds(3);
-
-        for (int i = 0; i < maxRetries; i++)
-        {
-            await Task.Delay(retryDelay);
-
-            var getReportResponse = await _pefindoApiService.GetReportAsync(eventId, token);
-
-            if (getReportResponse.Code == "01") // Report ready
-            {
-                return getReportResponse;
-            }
-            else if (getReportResponse.Code == "32") // Still processing
-            {
-                _logger.LogDebug("Report still processing, retry {Retry}/{MaxRetries}", i + 1, maxRetries);
-                continue;
-            }
-            else if (getReportResponse.Code == "36") // Big report
-            {
-                // Handle big report by downloading in chunks
-                return await _pefindoApiService.DownloadReportAsync(eventId, token);
-            }
-            else
-            {
-                throw new InvalidOperationException($"Report retrieval failed: {getReportResponse.Message}");
-            }
-        }
-
-        throw new TimeoutException($"Report generation timed out after {maxRetries} retries");
-    }
-
-    private async Task<JsonNode?> WaitForReportCompletionAsJson(string eventId, string token)
+    private async Task<JsonNode?> WaitForReportCompletion(string eventId, string token)
     {
         var maxRetries = 10;
         var retryDelay = TimeSpan.FromSeconds(3);
